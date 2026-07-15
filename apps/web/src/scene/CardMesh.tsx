@@ -329,6 +329,11 @@ export function CardStack({
     }
   }, [interactive, phase])
 
+  const onCommitRef = useRef(onCommit)
+  onCommitRef.current = onCommit
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+
   const projectClientToPlane = (clientX: number, clientY: number) => {
     const rect = gl.domElement.getBoundingClientRect()
     ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1
@@ -337,18 +342,15 @@ export function CardStack({
     dragPlane.constant = -(restPosition.current.y + 0.22)
     return raycaster.ray.intersectPlane(dragPlane, dragTarget.current)
   }
-
-  const onCommitRef = useRef(onCommit)
-  onCommitRef.current = onCommit
-  const onSelectRef = useRef(onSelect)
-  onSelectRef.current = onSelect
+  const projectRef = useRef(projectClientToPlane)
+  projectRef.current = projectClientToPlane
 
   useEffect(() => {
     if (phase !== 'dragging') return
     const canvas = gl.domElement
 
     const onMove = (event: PointerEvent) => {
-      const hit = projectClientToPlane(event.clientX, event.clientY)
+      const hit = projectRef.current(event.clientX, event.clientY)
       if (hit === null) return
       const rest = restPosition.current
       dragTarget.current.set(
@@ -375,7 +377,7 @@ export function CardStack({
       canvas.removeEventListener('pointerup', onUp)
       canvas.removeEventListener('pointercancel', onUp)
     }
-  }, [phase, gl, camera])
+  }, [phase, gl])
 
   useFrame((_, delta) => {
     const current = group.current
