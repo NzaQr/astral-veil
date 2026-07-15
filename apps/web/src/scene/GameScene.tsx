@@ -5,7 +5,6 @@ import {
   PerformanceMonitor,
 } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import {
   Component,
   Suspense,
@@ -317,7 +316,7 @@ function SceneContent({
           key={`${viewer}-${symbol}`}
           symbol={symbol}
           count={handCounts[symbol]}
-          position={[(index - 1) * 1.2, CARD_REST_Y, 2.45]}
+          position={[(index - 1) * 1.1, CARD_REST_Y, 2.45]}
           interactive={canCommit}
           selected={selected === symbol}
           reducedMotion={reducedMotion}
@@ -420,10 +419,10 @@ function SceneContent({
       {quality !== 'low' && (
         <ContactShadows
           position={[0, TABLE_Y + 0.001, 0]}
-          opacity={0.32}
+          opacity={0.28}
           scale={10}
-          blur={2}
-          far={2.5}
+          blur={1.8}
+          far={2.2}
           frames={1}
           color="#1a1410"
         />
@@ -441,22 +440,6 @@ function SceneContent({
           if (qualityPreference === 'auto') setRuntimeQuality('medium')
         }}
       />
-
-      {quality === 'high' ? (
-        <EffectComposer multisampling={4} enableNormalPass={false}>
-          <Bloom
-            intensity={0.1}
-            luminanceThreshold={0.94}
-            luminanceSmoothing={0.3}
-            mipmapBlur
-          />
-          <Vignette eskil={false} offset={0.42} darkness={0.25} />
-        </EffectComposer>
-      ) : quality === 'medium' ? (
-        <EffectComposer multisampling={0} enableNormalPass={false}>
-          <Vignette eskil={false} offset={0.45} darkness={0.2} />
-        </EffectComposer>
-      ) : null}
     </>
   )
 }

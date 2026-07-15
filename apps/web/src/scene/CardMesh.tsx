@@ -5,231 +5,82 @@ import {
   MathUtils,
   Plane,
   Raycaster,
-  Shape,
   Vector2,
   Vector3,
   type Group,
+  type Texture,
 } from 'three'
 import type { AstralSymbol } from '@astral-veil/engine'
-import {
-  createCardImperfections,
-  springStep,
-  type TextureQuality,
-} from './proceduralTextures'
+import { ART_ASPECT, useCardArtTextures } from './cardArt'
+import { springStep, type TextureQuality } from './proceduralTextures'
 
-/** Poker silhouette: ~2.5×3.5 aspect, nearly flat. */
-export const CARD_WIDTH = 0.92
-export const CARD_HEIGHT = 1.3
-export const CARD_THICKNESS = 0.01
-export const CARD_RADIUS = 0.048
-export const STACK_GAP = 0.012
-
-const FACE_COLORS: Record<AstralSymbol, string> = {
-  sun: '#3a2410',
-  moon: '#1a2234',
-  star: '#162030',
-}
-
-const SYMBOL_COLORS: Record<
-  AstralSymbol,
-  { color: string; emissive: string; emissiveIntensity: number }
-> = {
-  sun: { color: '#f0b84a', emissive: '#c46a12', emissiveIntensity: 0.45 },
-  moon: { color: '#d8e0f2', emissive: '#5a6aa0', emissiveIntensity: 0.28 },
-  star: { color: '#7adce6', emissive: '#4a68c8', emissiveIntensity: 0.4 },
-}
+/** Exact artwork proportions — do not stretch. */
+export const CARD_HEIGHT = 1.44
+export const CARD_WIDTH = CARD_HEIGHT * ART_ASPECT
+export const CARD_THICKNESS = 0.008
+export const CARD_RADIUS = 0.042
+export const STACK_GAP = 0.01
 
 type InteractPhase = 'idle' | 'hover' | 'dragging'
 
-function starShape(outer = 0.36, inner = 0.15): Shape {
-  const shape = new Shape()
-  for (let point = 0; point < 10; point += 1) {
-    const radius = point % 2 === 0 ? outer : inner
-    const angle = Math.PI / 2 + (point * Math.PI) / 5
-    const x = Math.cos(angle) * radius
-    const y = Math.sin(angle) * radius
-    if (point === 0) shape.moveTo(x, y)
-    else shape.lineTo(x, y)
-  }
-  shape.closePath()
-  return shape
-}
-
-/** Classic crescent: large disk with an offset hole. */
-function moonShape(): Shape {
-  const shape = new Shape()
-  const outer = 0.34
-  for (let i = 0; i <= 32; i += 1) {
-    const t = (i / 32) * Math.PI * 2
-    const x = Math.cos(t) * outer
-    const y = Math.sin(t) * outer
-    if (i === 0) shape.moveTo(x, y)
-    else shape.lineTo(x, y)
-  }
-  shape.closePath()
-  const hole = new Shape()
-  const inner = 0.26
-  const ox = 0.14
-  for (let i = 0; i <= 32; i += 1) {
-    const t = (i / 32) * Math.PI * 2
-    const x = Math.cos(t) * inner + ox
-    const y = Math.sin(t) * inner
-    if (i === 0) hole.moveTo(x, y)
-    else hole.lineTo(x, y)
-  }
-  hole.closePath()
-  shape.holes.push(hole)
-  return shape
-}
-
-function foilMaterial(
-  symbol: AstralSymbol,
-  intensity: number,
-) {
-  const mat = SYMBOL_COLORS[symbol]
+function CardBackFace({ facing }: { facing: 'up' | 'down' }) {
+  const y = facing === 'up' ? CARD_THICKNESS * 0.52 : -CARD_THICKNESS * 0.52
+  const rotX = facing === 'up' ? -Math.PI / 2 : Math.PI / 2
   return (
-    <meshStandardMaterial
-      color={mat.color}
-      emissive={mat.emissive}
-      emissiveIntensity={mat.emissiveIntensity * intensity}
-      metalness={0.35}
-      roughness={0.28}
-    />
-  )
-}
-
-function SunGlyph({ intensity }: { intensity: number }) {
-  return (
-    <group>
+    <group position={[0, y, 0]} rotation={[rotX, 0, 0]}>
       <mesh>
-        <cylinderGeometry args={[0.2, 0.2, 0.004, 32]} />
-        {foilMaterial('sun', intensity)}
-      </mesh>
-      {Array.from({ length: 12 }, (_, index) => {
-        const angle = (index / 12) * Math.PI * 2
-        return (
-          <mesh
-            key={index}
-            position={[Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3]}
-            rotation={[0, -angle, 0]}
-          >
-            <boxGeometry args={[0.14, 0.0035, 0.032]} />
-            {foilMaterial('sun', intensity)}
-          </mesh>
-        )
-      })}
-    </group>
-  )
-}
-
-function MoonGlyph({ intensity }: { intensity: number }) {
-  const shape = useMemo(() => moonShape(), [])
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <extrudeGeometry
-        args={[
-          shape,
-          {
-            depth: 0.004,
-            bevelEnabled: false,
-            curveSegments: 24,
-          },
-        ]}
-      />
-      {foilMaterial('moon', intensity)}
-    </mesh>
-  )
-}
-
-function StarGlyph({ intensity }: { intensity: number }) {
-  const shape = useMemo(() => starShape(0.38, 0.16), [])
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <extrudeGeometry
-        args={[
-          shape,
-          {
-            depth: 0.004,
-            bevelEnabled: true,
-            bevelThickness: 0.002,
-            bevelSize: 0.003,
-            bevelSegments: 1,
-          },
-        ]}
-      />
-      {foilMaterial('star', intensity)}
-    </mesh>
-  )
-}
-
-function SymbolGlyph({
-  symbol,
-  intensity,
-}: {
-  symbol: AstralSymbol
-  intensity: number
-}) {
-  if (symbol === 'sun') return <SunGlyph intensity={intensity} />
-  if (symbol === 'moon') return <MoonGlyph intensity={intensity} />
-  return <StarGlyph intensity={intensity} />
-}
-
-function FaceArt({
-  faceUp,
-  symbol,
-  highlight,
-}: {
-  faceUp: boolean
-  symbol: AstralSymbol
-  highlight: number
-}) {
-  if (faceUp) {
-    return (
-      <group position={[0, CARD_THICKNESS * 0.55, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[CARD_WIDTH * 0.86, CARD_HEIGHT * 0.86]} />
-          <meshStandardMaterial
-            color={FACE_COLORS[symbol]}
-            metalness={0.06}
-            roughness={0.58}
-            emissive={SYMBOL_COLORS[symbol].emissive}
-            emissiveIntensity={0.06 + highlight * 0.08}
-          />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.001]}>
-          <ringGeometry args={[0.4, 0.44, 48]} />
-          <meshStandardMaterial
-            color={SYMBOL_COLORS[symbol].color}
-            metalness={0.4}
-            roughness={0.35}
-            emissive={SYMBOL_COLORS[symbol].emissive}
-            emissiveIntensity={0.15}
-          />
-        </mesh>
-        <group position={[0, 0.003, 0]}>
-          <SymbolGlyph symbol={symbol} intensity={1 + highlight * 0.35} />
-        </group>
-      </group>
-    )
-  }
-
-  return (
-    <group position={[0, CARD_THICKNESS * 0.55, 0]} rotation={[0, Math.PI / 4, 0]}>
-      <mesh>
-        <torusGeometry args={[0.2, 0.012, 8, 28]} />
-        <meshStandardMaterial color="#9a8264" metalness={0.3} roughness={0.45} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <octahedronGeometry args={[0.08, 0]} />
+        <planeGeometry args={[CARD_WIDTH, CARD_HEIGHT]} />
         <meshStandardMaterial
-          color="#5a6480"
-          emissive="#243048"
-          emissiveIntensity={0.18}
+          color="#f3ebe0"
+          metalness={0.06}
+          roughness={0.62}
+          envMapIntensity={0.35}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.001]}>
+        <ringGeometry args={[0.22, 0.26, 40]} />
+        <meshStandardMaterial
+          color="#b08a52"
+          metalness={0.35}
+          roughness={0.42}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.0015]} rotation={[0, 0, Math.PI / 4]}>
+        <octahedronGeometry args={[0.1, 0]} />
+        <meshStandardMaterial
+          color="#6a7488"
           metalness={0.25}
           roughness={0.45}
+          emissive="#243048"
+          emissiveIntensity={0.12}
         />
       </mesh>
     </group>
+  )
+}
+
+function CardFace({
+  map,
+  highlight,
+  dimmed,
+}: {
+  map: Texture
+  highlight: number
+  dimmed: boolean
+}) {
+  return (
+    <mesh position={[0, CARD_THICKNESS * 0.52, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[CARD_WIDTH, CARD_HEIGHT]} />
+      <meshStandardMaterial
+        map={map}
+        color="#ffffff"
+        metalness={0.08}
+        roughness={0.55 - highlight * 0.04}
+        envMapIntensity={0.35 + highlight * 0.18}
+        transparent={dimmed}
+        opacity={dimmed ? 0.55 : 1}
+      />
+    </mesh>
   )
 }
 
@@ -237,50 +88,49 @@ function CardBody({
   faceUp,
   symbol,
   offset,
-  variation,
   highlight,
-  maps,
+  textures,
   dualSided = false,
   dimmed = false,
 }: {
   faceUp: boolean
   symbol: AstralSymbol
   offset: number
-  variation: number
   highlight: number
-  maps: ReturnType<typeof createCardImperfections>
+  textures: Record<AstralSymbol, Texture>
   dualSided?: boolean
   dimmed?: boolean
 }) {
+  const map = textures[symbol]
+
   return (
-    <group position={[0, offset, 0]} scale={dimmed ? 0.96 : 1}>
+    <group position={[0, offset, 0]}>
       <RoundedBox
         args={[CARD_WIDTH, CARD_THICKNESS, CARD_HEIGHT]}
         radius={CARD_RADIUS}
-        smoothness={3}
+        smoothness={4}
         castShadow
         receiveShadow
       >
         <meshStandardMaterial
-          color="#f0e8da"
-          metalness={0.04}
-          roughness={0.78 + variation * 0.05}
-          roughnessMap={maps.roughnessMap}
-          normalMap={maps.normalMap}
-          normalScale={new Vector2(0.08, 0.08)}
+          color="#e8dcc8"
+          metalness={0.12}
+          roughness={0.55}
+          envMapIntensity={0.35}
           transparent={dimmed}
           opacity={dimmed ? 0.55 : 1}
         />
       </RoundedBox>
+
       {dualSided ? (
         <>
-          <FaceArt faceUp symbol={symbol} highlight={highlight} />
-          <group rotation={[Math.PI, 0, 0]}>
-            <FaceArt faceUp={false} symbol={symbol} highlight={highlight} />
-          </group>
+          <CardFace map={map} highlight={highlight} dimmed={dimmed} />
+          <CardBackFace facing="down" />
         </>
+      ) : faceUp ? (
+        <CardFace map={map} highlight={highlight} dimmed={dimmed} />
       ) : (
-        <FaceArt faceUp={faceUp} symbol={symbol} highlight={highlight} />
+        <CardBackFace facing="up" />
       )}
     </group>
   )
@@ -307,7 +157,6 @@ export function CardStack({
   interactive = false,
   selected = false,
   reducedMotion = false,
-  textureQuality = 'medium',
   onSelect,
   onCommit,
 }: CardStackProps) {
@@ -322,14 +171,7 @@ export function CardStack({
   const { camera, gl } = useThree()
   const restPosition = useRef(new Vector3(position[0], position[1], position[2]))
   const visibleLayers = Math.min(count, 5)
-  const maps = useMemo(
-    () => createCardImperfections(textureQuality),
-    [textureQuality],
-  )
-  const variation = useMemo(
-    () => ((symbol.charCodeAt(0) * 17 + count * 13) % 29) / 29,
-    [count, symbol],
-  )
+  const textures = useCardArtTextures()
 
   const setPhaseSafe = (next: InteractPhase) => {
     phaseRef.current = next
@@ -441,18 +283,18 @@ export function CardStack({
     let tiltX = 0
     let tiltZ = 0
     if (!reducedMotion && hovering && !dragging) {
-      tiltX = MathUtils.clamp(localHover.current.z * 0.18, -0.1, 0.1)
-      tiltZ = MathUtils.clamp(-localHover.current.x * 0.22, -0.12, 0.12)
+      tiltX = MathUtils.clamp(localHover.current.z * 0.16, -0.09, 0.09)
+      tiltZ = MathUtils.clamp(-localHover.current.x * 0.2, -0.11, 0.11)
     } else if (!reducedMotion && dragging) {
       const dx = current.position.x - rest.x
       const dz = current.position.z - rest.z
-      tiltX = MathUtils.clamp(dz * 0.08, -0.12, 0.12)
-      tiltZ = MathUtils.clamp(-dx * 0.1, -0.14, 0.14)
+      tiltX = MathUtils.clamp(dz * 0.07, -0.1, 0.1)
+      tiltZ = MathUtils.clamp(-dx * 0.09, -0.12, 0.12)
     }
     current.rotation.x = springStep(current.rotation.x, tiltX, delta, 14)
     current.rotation.z = springStep(current.rotation.z, tiltZ, delta, 14)
 
-    const scale = selected || dragging ? 1.04 : hovering ? 1.02 : 1
+    const scale = selected || dragging ? 1.045 : hovering ? 1.02 : 1
     current.scale.x = springStep(current.scale.x, scale, delta, 14)
     current.scale.y = springStep(current.scale.y, scale, delta, 14)
     current.scale.z = springStep(current.scale.z, scale, delta, 14)
@@ -510,14 +352,13 @@ export function CardStack({
           faceUp={faceUp && index === visibleLayers - 1}
           symbol={symbol}
           offset={index * STACK_GAP}
-          variation={variation + index * 0.02}
           highlight={
             index === visibleLayers - 1 &&
             (selected || phase === 'hover' || phase === 'dragging')
               ? 1
               : 0
           }
-          maps={maps}
+          textures={textures}
         />
       ))}
     </group>
@@ -540,7 +381,6 @@ export function SingleCard({
   position,
   faceUp,
   reducedMotion = false,
-  textureQuality = 'medium',
   highlighted = false,
   dimmed = false,
   fromPosition,
@@ -548,10 +388,7 @@ export function SingleCard({
   const group = useRef<Group>(null)
   const flip = useRef(faceUp ? 0 : Math.PI)
   const seeded = useRef(false)
-  const maps = useMemo(
-    () => createCardImperfections(textureQuality),
-    [textureQuality],
-  )
+  const textures = useCardArtTextures()
 
   useFrame((_, delta) => {
     const current = group.current
@@ -588,9 +425,8 @@ export function SingleCard({
         faceUp={faceUp}
         symbol={symbol}
         offset={0}
-        variation={0.35}
         highlight={highlighted ? 1 : 0}
-        maps={maps}
+        textures={textures}
         dualSided
         dimmed={dimmed}
       />
