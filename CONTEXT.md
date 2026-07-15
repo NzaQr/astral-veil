@@ -36,6 +36,10 @@ _Avoid_: Player deck
 The secret, irreversible card a player has chosen for the current round.
 _Avoid_: Selected card, locked card
 
+**Round reveal**:
+The staged unveiling, after both players have a committed selection, of those plays in the order they were committed, then the center card, then the round outcome.
+_Avoid_: Reveal animation, reveal stage machine, flip sequence
+
 **Standoff**:
 A round in which both players match the center card or neither player does, leaving the pot in place.
 _Avoid_: Round tie
@@ -55,10 +59,6 @@ _Avoid_: Remaining deck
 **Pot**:
 The public shared collection of revealed cards carried across standoffs and claimed after a decisive round.
 _Avoid_: Pile, pool
-
-**Discard**:
-The out-of-play collection for cards permanently removed from the match.
-_Avoid_: Graveyard, trash
 
 **Pattern break**:
 A deliberate departure from an established selection pattern intended to make future choices harder for an opponent to predict.

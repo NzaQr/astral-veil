@@ -1,150 +1,43 @@
 import {
-  SYMBOLS,
   getHotSeatCommitOrder,
-  type AstralSymbol,
-  type Card,
+  getUnseenCenterCounts,
   type MatchState,
   type PlayerId,
 } from '@astral-veil/engine'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useState } from 'react'
-import { GameScene } from '../scene/GameScene'
+import { useEffect } from 'react'
+import { CardBoard } from './CardBoard'
 import { SymbolIcon } from './SymbolIcon'
 import { symbolName } from '../game/symbols'
 import {
-  visibleCenterHistory,
-  visibleHand,
-  visiblePot,
-  visibleUnseenCounts,
-} from '../game/presentation'
+  advanceRevealBeat,
+  frameForBeat,
+  revealDelay,
+  resultHoldMs,
+  type RoundRevealFrame,
+} from '../game/roundReveal'
 import {
   getActiveViewer,
   getAiDelay,
   useGameStore,
   type MatchMode,
-  type RuntimeQuality,
+  type RevealStage,
 } from '../game/store'
-import { revealDelay, resultHoldMs } from '../game/revealTiming'
 
 function playerLabel(player: PlayerId, mode: MatchMode): string {
   if (mode === 'solo') return player === 'player-1' ? 'You' : 'Veil AI'
   return player === 'player-1' ? 'Player One' : 'Player Two'
 }
 
-function symbolCounts(cards: readonly { symbol: AstralSymbol }[]) {
-  const counts: Record<AstralSymbol, number> = { sun: 0, moon: 0, star: 0 }
-  for (const card of cards) counts[card.symbol] += 1
-  return counts
-}
-
-function ScoreBadge({
-  label,
-  score,
-  align,
-}: {
-  label: string
-  score: number
-  align: 'left' | 'right'
-}) {
+function CenterHistory({ frame, match }: { frame: RoundRevealFrame | null; match: MatchState }) {
+  const history = frame?.history ?? match.history
   return (
-    <div className={`score-badge score-${align}`}>
-      <div>
-        <span>{label}</span>
-        <small>cards in hand</small>
-      </div>
-      <strong>{score}</strong>
-    </div>
-  )
-}
-
-function ProbabilityPanel({
-  match,
-  stage,
-}: {
-  match: MatchState
-  stage: ReturnType<typeof useGameStore.getState>['revealStage']
-}) {
-  const counts = visibleUnseenCounts(match, stage)
-  const total = counts.sun + counts.moon + counts.star
-  return (
-    <details className="probability-panel" open>
+    <details className="center-history">
       <summary>
-        <span>
-          Unseen center <small>includes the hidden card</small>
-        </span>
-        <strong>{total}</strong>
+        <span>History</span>
+        <strong className="tabular">{history.length}</strong>
       </summary>
-      <div className="probability-rows">
-        {SYMBOLS.map((symbol) => {
-          const percentage = Math.round(
-            total === 0 ? 0 : (counts[symbol] / total) * 100,
-          )
-          return (
-            <div key={symbol} className={`probability-row probability-${symbol}`}>
-              <SymbolIcon symbol={symbol} size={20} />
-              <span>{symbolName(symbol)}</span>
-              <div className="probability-track" aria-hidden="true">
-                <i style={{ width: `${percentage}%` }} />
-              </div>
-              <strong>{percentage}%</strong>
-              <small>{counts[symbol]}</small>
-            </div>
-          )
-        })}
-      </div>
-    </details>
-  )
-}
-
-function PotPanel({ cards }: { cards: readonly Card[] }) {
-  const [open, setOpen] = useState(false)
-  const counts = useMemo(() => symbolCounts(cards), [cards])
-  return (
-    <div className="pot-panel">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        className="pot-button"
-      >
-        <span>Pot</span>
-        <strong>{cards.length}</strong>
-        <small>{open ? 'Hide symbols' : 'Inspect symbols'}</small>
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            className="pot-popover"
-            initial={{ opacity: 0, y: 7, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.99 }}
-            transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-          >
-            {SYMBOLS.map((symbol) => (
-              <span key={symbol}>
-                <SymbolIcon symbol={symbol} size={18} />
-                {counts[symbol]}
-              </span>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-function CenterHistory({
-  match,
-  stage,
-}: {
-  match: MatchState
-  stage: ReturnType<typeof useGameStore.getState>['revealStage']
-}) {
-  const history = visibleCenterHistory(match, stage)
-  return (
-    <div className="center-history" aria-label="Revealed center symbols">
-      <span>Center history</span>
-      <div>
+      <div className="center-history-body">
         {history.length === 0 ? (
           <small>None yet</small>
         ) : (
@@ -158,79 +51,30 @@ function CenterHistory({
           ))
         )}
       </div>
-    </div>
-  )
-}
-
-function AccessibleCommit({
-  match,
-  viewer,
-  disabled,
-}: {
-  match: MatchState
-  viewer: PlayerId
-  disabled: boolean
-}) {
-  const selected = useGameStore((state) => state.selectedSymbol)
-  const selectSymbol = useGameStore((state) => state.selectSymbol)
-  const commitSelected = useGameStore((state) => state.commitSelected)
-  const counts = useMemo(
-    () => symbolCounts(match.players[viewer].hand),
-    [match.players, viewer],
-  )
-
-  return (
-    <div className="commit-controls">
-      <p>
-        {disabled
-          ? 'Commitment sealed'
-          : 'Choose a stack, then play its top card'}
-      </p>
-      <div className="symbol-actions" role="group" aria-label="Choose a symbol">
-        {SYMBOLS.map((symbol) => (
-          <button
-            key={symbol}
-            type="button"
-            disabled={disabled || counts[symbol] === 0}
-            className={selected === symbol ? 'is-selected' : ''}
-            onClick={() => selectSymbol(symbol)}
-            aria-pressed={selected === symbol}
-          >
-            <SymbolIcon symbol={symbol} size={24} />
-            <span>{symbolName(symbol)}</span>
-            <strong>{counts[symbol]}</strong>
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        className="play-card-button"
-        disabled={disabled || selected === null}
-        onClick={commitSelected}
-      >
-        {selected === null ? 'Select a symbol' : `Play ${symbolName(selected)}`}
-      </button>
-    </div>
+    </details>
   )
 }
 
 function ResolutionBanner({
   match,
   mode,
+  stage,
+  frame,
   reducedMotion,
 }: {
   match: MatchState
   mode: MatchMode
+  stage: RevealStage
+  frame: RoundRevealFrame | null
   reducedMotion: boolean
 }) {
-  const stage = useGameStore((state) => state.revealStage)
   const continueRound = useGameStore((state) => state.continueRound)
-  const result = match.lastResult
-  if (result === null || stage === 'choosing') return null
+  if (frame === null || stage === 'choosing') return null
+  const result = frame.result
 
-  let title = 'Your card is on the table'
-  let detail = 'Wait for the opposing play.'
-  if (stage === 'opponent') {
+  let title = 'A card is on the table'
+  let detail = 'Wait for the next commitment.'
+  if (stage === 'secondPlay') {
     title = 'Both plays are visible'
     detail = 'Read the commitments before the center lifts.'
   }
@@ -347,7 +191,11 @@ function MatchResult({
           <button className="primary-button" type="button" onClick={rematch}>
             Rematch
           </button>
-          <button className="secondary-button" type="button" onClick={exitMatch}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={exitMatch}
+          >
             Main menu
           </button>
         </div>
@@ -368,7 +216,11 @@ function Handoff({
   const hotSeatIndex = useGameStore((state) => state.hotSeatIndex)
   const accepted = useGameStore((state) => state.handoffAccepted)
   const accept = useGameStore((state) => state.acceptHandoff)
-  if (mode !== 'hot-seat' || accepted || match.phase !== 'awaiting-selections') {
+  if (
+    mode !== 'hot-seat' ||
+    accepted ||
+    match.phase !== 'awaiting-selections'
+  ) {
     return null
   }
   const player = getHotSeatCommitOrder(match.round)[hotSeatIndex]
@@ -387,8 +239,8 @@ function Handoff({
       <p className="eyebrow">Privacy handoff</p>
       <h2 id="handoff-title">Pass to {playerLabel(player, mode)}</h2>
       <p>
-        The previous choice is concealed. Continue only when no one else can
-        see the screen.
+        The previous choice is concealed. Continue only when no one else can see
+        the screen.
       </p>
       <button className="primary-button" type="button" onClick={accept}>
         I’m ready
@@ -401,27 +253,19 @@ interface MatchScreenProps {
   match: MatchState
   mode: MatchMode
   reducedMotion: boolean
-  effectiveQuality: RuntimeQuality
 }
 
-export function MatchScreen({
-  match,
-  mode,
-  reducedMotion,
-  effectiveQuality,
-}: MatchScreenProps) {
+export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
   const revealStage = useGameStore((state) => state.revealStage)
+  const revealSequence = useGameStore((state) => state.revealSequence)
   const hotSeatIndex = useGameStore((state) => state.hotSeatIndex)
   const handoffAccepted = useGameStore((state) => state.handoffAccepted)
   const performAiCommit = useGameStore((state) => state.performAiCommit)
-  const setRevealStage = useGameStore((state) => state.setRevealStage)
+  const advanceReveal = useGameStore((state) => state.advanceReveal)
   const continueRound = useGameStore((state) => state.continueRound)
   const exitMatch = useGameStore((state) => state.exitMatch)
   const openDialog = useGameStore((state) => state.openDialog)
-  const qualityPreference = useGameStore((state) => state.quality)
   const viewer = getActiveViewer(match, mode, hotSeatIndex)
-  const opponent: PlayerId =
-    viewer === 'player-1' ? 'player-2' : 'player-1'
   const handoffVisible =
     mode === 'hot-seat' &&
     !handoffAccepted &&
@@ -431,10 +275,12 @@ export function MatchScreen({
     match.players[viewer].committed === null &&
     revealStage === 'choosing' &&
     !handoffVisible
-  const viewerHand = visibleHand(match, viewer, revealStage)
-  const opponentHand = visibleHand(match, opponent, revealStage)
-  const presentedPot = visiblePot(match, revealStage)
-  const unseenCounts = visibleUnseenCounts(match, revealStage)
+  const revealFrame =
+    revealSequence !== null && revealStage !== 'choosing'
+      ? frameForBeat(revealSequence, revealStage)
+      : null
+  const unseenCounts =
+    revealFrame?.unseenCenterCounts ?? getUnseenCenterCounts(match)
   const unseenTotal =
     unseenCounts.sun + unseenCounts.moon + unseenCounts.star
 
@@ -455,31 +301,15 @@ export function MatchScreen({
   }, [match, mode, performAiCommit, reducedMotion])
 
   useEffect(() => {
-    if (revealStage !== 'player') return
+    if (revealStage === 'choosing' || revealStage === 'result') return
+    const next = advanceRevealBeat(revealStage)
+    if (next === null) return
     const timer = window.setTimeout(
-      () => setRevealStage('opponent'),
-      revealDelay('player', reducedMotion),
+      () => advanceReveal(),
+      revealDelay(revealStage, reducedMotion),
     )
     return () => window.clearTimeout(timer)
-  }, [reducedMotion, revealStage, setRevealStage])
-
-  useEffect(() => {
-    if (revealStage !== 'opponent') return
-    const timer = window.setTimeout(
-      () => setRevealStage('center'),
-      revealDelay('opponent', reducedMotion),
-    )
-    return () => window.clearTimeout(timer)
-  }, [reducedMotion, revealStage, setRevealStage])
-
-  useEffect(() => {
-    if (revealStage !== 'center') return
-    const timer = window.setTimeout(
-      () => setRevealStage('result'),
-      revealDelay('center', reducedMotion),
-    )
-    return () => window.clearTimeout(timer)
-  }, [reducedMotion, revealStage, setRevealStage])
+  }, [advanceReveal, reducedMotion, revealStage])
 
   useEffect(() => {
     if (revealStage !== 'result' || match.phase !== 'resolved') return
@@ -514,46 +344,31 @@ export function MatchScreen({
           </button>
         </header>
         <div className="score-row">
-          <ScoreBadge
-            label={playerLabel(viewer, mode)}
-            score={viewerHand.length}
-            align="left"
-          />
           <div className="center-deck-count">
             <span>Unseen</span>
             <strong>{unseenTotal}</strong>
           </div>
-          <ScoreBadge
-            label={playerLabel(opponent, mode)}
-            score={opponentHand.length}
-            align="right"
-          />
         </div>
         <section className="table-region" aria-label="Astral Veil table">
-          <GameScene
+          <CardBoard
             match={match}
             mode={mode}
             revealStage={revealStage}
+            revealFrame={revealFrame}
             reducedMotion={reducedMotion}
-            quality={effectiveQuality}
-            qualityPreference={qualityPreference}
+            canCommit={canCommit}
           />
           <div className="table-overlays">
-            <ProbabilityPanel match={match} stage={revealStage} />
-            <PotPanel cards={presentedPot} />
-            <CenterHistory match={match} stage={revealStage} />
+            <CenterHistory frame={revealFrame} match={match} />
           </div>
           <ResolutionBanner
             match={match}
             mode={mode}
+            stage={revealStage}
+            frame={revealFrame}
             reducedMotion={reducedMotion}
           />
         </section>
-        <AccessibleCommit
-          match={match}
-          viewer={viewer}
-          disabled={!canCommit}
-        />
       </div>
       <AnimatePresence initial={false}>
         {handoffVisible && (
@@ -565,11 +380,7 @@ export function MatchScreen({
           />
         )}
       </AnimatePresence>
-      <MatchResult
-        match={match}
-        mode={mode}
-        reducedMotion={reducedMotion}
-      />
+      <MatchResult match={match} mode={mode} reducedMotion={reducedMotion} />
     </main>
   )
 }

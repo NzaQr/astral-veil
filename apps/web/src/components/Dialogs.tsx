@@ -3,11 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { SymbolIcon } from './SymbolIcon'
 import { symbolName } from '../game/symbols'
-import {
-  useGameStore,
-  type MotionPreference,
-  type QualityPreference,
-} from '../game/store'
+import { useGameStore, type MotionPreference } from '../game/store'
 
 interface DialogFrameProps {
   title: string
@@ -103,8 +99,8 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
             <div>
               <h3>Reveal the three cards</h3>
               <p>
-                Both played cards are revealed together, followed by the center
-                card. All three enter the public pot.
+                Plays are revealed in the order they were committed, then the
+                center card, then the outcome. All three enter the public pot.
               </p>
             </div>
           </li>
@@ -113,10 +109,10 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
             <div>
               <h3>Resolve the omen</h3>
               <p>
-                Exactly one match is a decisive round. The matching card is
-                discarded; the other player takes every remaining card in the
-                accumulated pot. If both or neither match, it is a standoff and
-                the pot stays.
+                Exactly one match is a decisive round. The other player takes
+                every card in the accumulated pot — the center and both played
+                cards, plus anything left from prior standoffs. If both or
+                neither match, it is a standoff and the pot stays.
               </p>
             </div>
           </li>
@@ -144,9 +140,7 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
 }
 
 function Settings({ reducedMotion }: { reducedMotion: boolean }) {
-  const quality = useGameStore((state) => state.quality)
   const motionPreference = useGameStore((state) => state.motion)
-  const setQuality = useGameStore((state) => state.setQuality)
   const setMotion = useGameStore((state) => state.setMotion)
 
   return (
@@ -156,18 +150,6 @@ function Settings({ reducedMotion }: { reducedMotion: boolean }) {
       reducedMotion={reducedMotion}
     >
       <div className="settings-list">
-        <fieldset>
-          <legend>3D quality</legend>
-          <p>
-            Auto adapts to pixel density, input type, and live rendering
-            performance.
-          </p>
-          <SegmentedControl<QualityPreference>
-            value={quality}
-            options={['auto', 'high', 'medium', 'low']}
-            onChange={setQuality}
-          />
-        </fieldset>
         <fieldset>
           <legend>Motion</legend>
           <p>

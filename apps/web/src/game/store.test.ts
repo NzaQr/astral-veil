@@ -1,9 +1,6 @@
 import { getHotSeatCommitOrder } from '@astral-veil/engine'
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  visibleCenterHistory,
-  visibleUnseenCounts,
-} from './presentation'
+import { frameForBeat } from './roundReveal'
 import { useGameStore } from './store'
 
 describe('game session orchestration', () => {
@@ -11,7 +8,7 @@ describe('game session orchestration', () => {
     useGameStore.getState().exitMatch()
   })
 
-  it('conceals each hot-seat choice and alternates first chooser', () => {
+  it('conceals each hot-seat choice and kicks off a round reveal', () => {
     useGameStore.getState().startHotSeat()
     let state = useGameStore.getState()
     expect(state.handoffAccepted).toBe(false)
@@ -28,21 +25,30 @@ describe('game session orchestration', () => {
     useGameStore.getState().commitSymbol('moon')
     state = useGameStore.getState()
     expect(state.match?.phase).toBe('resolved')
-    expect(state.revealStage).toBe('player')
-    const resolvedMatch = state.match
-    if (resolvedMatch === null) throw new Error('Expected a resolved match')
-    const concealedCounts = visibleUnseenCounts(resolvedMatch, 'player')
+    expect(state.revealStage).toBe('firstPlay')
+    expect(state.revealSequence).not.toBeNull()
+    const sequence = state.revealSequence
+    if (sequence === null) throw new Error('Expected a reveal sequence')
+    const firstFrame = frameForBeat(sequence, 'firstPlay')
     expect(
-      concealedCounts.sun + concealedCounts.moon + concealedCounts.star,
+      firstFrame.unseenCenterCounts.sun +
+        firstFrame.unseenCenterCounts.moon +
+        firstFrame.unseenCenterCounts.star,
     ).toBe(15)
-    expect(visibleCenterHistory(resolvedMatch, 'player')).toHaveLength(0)
+    expect(firstFrame.history).toHaveLength(0)
+    expect(sequence.commitOrder).toEqual(['player-1', 'player-2'])
 
-    state.setRevealStage('result')
+    state.advanceReveal()
+    state.advanceReveal()
+    state.advanceReveal()
+    state = useGameStore.getState()
+    expect(state.revealStage).toBe('result')
     state.continueRound()
     state = useGameStore.getState()
     expect(state.match?.round).toBe(2)
     expect(getHotSeatCommitOrder(state.match?.round ?? 0)[0]).toBe('player-2')
     expect(state.handoffAccepted).toBe(false)
+    expect(state.revealSequence).toBeNull()
   })
 
   it('guards solo AI commitment against duplicate effects', () => {
@@ -59,6 +65,10 @@ describe('game session orchestration', () => {
     expect(afterSecond.match?.history).toHaveLength(1)
     expect(afterSecond.match).toBe(afterFirst.match)
     expect(afterFirst.aiRngState).not.toBe(rngBefore)
-    expect(afterFirst.revealStage).toBe('player')
+    expect(afterFirst.revealStage).toBe('firstPlay')
+    expect(afterFirst.revealSequence?.commitOrder).toEqual([
+      'player-1',
+      'player-2',
+    ])
   })
 })

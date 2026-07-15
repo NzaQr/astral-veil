@@ -16,19 +16,18 @@ import {
   persist,
   type StateStorage,
 } from 'zustand/middleware'
+import {
+  advanceRevealBeat,
+  buildRoundReveal,
+  type RevealBeat,
+  type RoundRevealSequence,
+} from './roundReveal'
 
 export type Screen = 'home' | 'difficulty' | 'match'
 export type MatchMode = 'solo' | 'hot-seat'
-export type RevealStage =
-  | 'choosing'
-  | 'player'
-  | 'opponent'
-  | 'center'
-  | 'result'
+export type RevealStage = 'choosing' | RevealBeat
 export type DialogName = 'rules' | 'settings'
-export type QualityPreference = 'auto' | 'high' | 'medium' | 'low'
 export type MotionPreference = 'system' | 'reduce' | 'full'
-export type RuntimeQuality = Exclude<QualityPreference, 'auto'>
 
 interface GameStore {
   screen: Screen
@@ -39,11 +38,10 @@ interface GameStore {
   matchSeed: number
   aiRngState: number
   revealStage: RevealStage
+  revealSequence: RoundRevealSequence | null
   selectedSymbol: AstralSymbol | null
   hotSeatIndex: 0 | 1
   handoffAccepted: boolean
-  quality: QualityPreference
-  runtimeQuality: RuntimeQuality
   motion: MotionPreference
   setScreen: (screen: Screen) => void
   openDialog: (dialog: DialogName) => void
@@ -55,12 +53,10 @@ interface GameStore {
   commitSelected: () => void
   commitSymbol: (symbol: AstralSymbol) => void
   performAiCommit: () => void
-  setRevealStage: (stage: RevealStage) => void
+  advanceReveal: () => void
   continueRound: () => void
   rematch: () => void
   exitMatch: () => void
-  setQuality: (quality: QualityPreference) => void
-  setRuntimeQuality: (quality: RuntimeQuality) => void
   setMotion: (motion: MotionPreference) => void
 }
 
@@ -74,6 +70,40 @@ function activeHotSeatPlayer(match: MatchState, index: 0 | 1): PlayerId {
   return getHotSeatCommitOrder(match.round)[index]
 }
 
+function chronologicalCommitOrder(
+  mode: MatchMode,
+  round: number,
+): readonly [PlayerId, PlayerId] {
+  return mode === 'hot-seat'
+    ? getHotSeatCommitOrder(round)
+    : ['player-1', 'player-2']
+}
+
+function clearReveal() {
+  return {
+    revealStage: 'choosing' as const,
+    revealSequence: null,
+  }
+}
+
+function kickoffReveal(
+  before: MatchState,
+  after: MatchState,
+  mode: MatchMode,
+): Pick<GameStore, 'revealStage' | 'revealSequence'> {
+  if (after.phase !== 'resolved' && after.phase !== 'complete') {
+    return clearReveal()
+  }
+  return {
+    revealStage: 'firstPlay',
+    revealSequence: buildRoundReveal(
+      before,
+      after,
+      chronologicalCommitOrder(mode, before.round),
+    ),
+  }
+}
+
 function initialState() {
   return {
     screen: 'home' as Screen,
@@ -84,11 +114,10 @@ function initialState() {
     matchSeed: 0,
     aiRngState: 1,
     revealStage: 'choosing' as RevealStage,
+    revealSequence: null,
     selectedSymbol: null,
     hotSeatIndex: 0 as 0 | 1,
     handoffAccepted: false,
-    quality: 'auto' as QualityPreference,
-    runtimeQuality: 'medium' as RuntimeQuality,
     motion: 'system' as MotionPreference,
   }
 }
@@ -120,7 +149,7 @@ export const useGameStore = create<GameStore>()(
           match: createMatch(matchSeed),
           matchSeed,
           aiRngState: aiSeed,
-          revealStage: 'choosing',
+          ...clearReveal(),
           selectedSymbol: null,
           hotSeatIndex: 0,
           handoffAccepted: true,
@@ -134,7 +163,7 @@ export const useGameStore = create<GameStore>()(
           match: createMatch(matchSeed),
           matchSeed,
           aiRngState: aiSeed,
-          revealStage: 'choosing',
+          ...clearReveal(),
           selectedSymbol: null,
           hotSeatIndex: 0,
           handoffAccepted: false,
@@ -186,6 +215,7 @@ export const useGameStore = create<GameStore>()(
           .find((candidate) => candidate.symbol === symbol)
         if (card === undefined) return
 
+        const before = match
         const nextMatch = commitCard(match, player, card.id)
         if (mode === 'hot-seat' && hotSeatIndex === 0) {
           set({
@@ -200,10 +230,7 @@ export const useGameStore = create<GameStore>()(
           match: nextMatch,
           handoffAccepted: mode === 'solo',
           selectedSymbol: null,
-          revealStage:
-            nextMatch.phase === 'resolved' || nextMatch.phase === 'complete'
-              ? 'player'
-              : 'choosing',
+          ...kickoffReveal(before, nextMatch, mode),
         })
       },
       performAiCommit: () => {
@@ -222,14 +249,21 @@ export const useGameStore = create<GameStore>()(
           difficulty,
           aiRngState,
         )
+        const before = match
         const nextMatch = commitCard(match, 'player-2', choice.cardId)
         set({
           match: nextMatch,
           aiRngState: choice.rngState,
-          revealStage: 'player',
+          ...kickoffReveal(before, nextMatch, mode),
         })
       },
-      setRevealStage: (revealStage) => set({ revealStage }),
+      advanceReveal: () => {
+        const { revealStage, revealSequence } = get()
+        if (revealSequence === null || revealStage === 'choosing') return
+        const next = advanceRevealBeat(revealStage)
+        if (next === null) return
+        set({ revealStage: next })
+      },
       continueRound: () => {
         const { match, mode, revealStage } = get()
         if (
@@ -242,7 +276,7 @@ export const useGameStore = create<GameStore>()(
         const nextMatch = advanceRound(match)
         set({
           match: nextMatch,
-          revealStage: 'choosing',
+          ...clearReveal(),
           selectedSymbol: null,
           hotSeatIndex: 0,
           handoffAccepted: mode === 'solo',
@@ -258,13 +292,11 @@ export const useGameStore = create<GameStore>()(
           screen: 'home',
           mode: null,
           match: null,
-          revealStage: 'choosing',
+          ...clearReveal(),
           selectedSymbol: null,
           handoffAccepted: false,
           dialog: null,
         }),
-      setQuality: (quality) => set({ quality }),
-      setRuntimeQuality: (runtimeQuality) => set({ runtimeQuality }),
       setMotion: (motion) => set({ motion }),
     }),
     {
@@ -272,7 +304,7 @@ export const useGameStore = create<GameStore>()(
       storage: createJSONStorage(() =>
         typeof window === 'undefined' ? memoryStorage : localStorage,
       ),
-      partialize: ({ quality, motion }) => ({ quality, motion }),
+      partialize: ({ motion }) => ({ motion }),
     },
   ),
 )
@@ -290,3 +322,5 @@ export function getActiveViewer(
 export function getAiDelay(rngState: number, reducedMotion: boolean): number {
   return reducedMotion ? 0 : 900 + (rngState % 400)
 }
+
+export type { RevealBeat, RoundRevealSequence }
