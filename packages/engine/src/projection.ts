@@ -43,19 +43,20 @@ function publicView(state: MatchState): PublicMatchView {
     players: {
       'player-1': {
         handSize: state.players['player-1'].hand.length,
+        burdenSize: state.players['player-1'].burden.length,
         hasCommitted: state.players['player-1'].committed !== null,
         consecutiveFallbacks:
           state.players['player-1'].consecutiveFallbacks,
       },
       'player-2': {
         handSize: state.players['player-2'].hand.length,
+        burdenSize: state.players['player-2'].burden.length,
         hasCommitted: state.players['player-2'].committed !== null,
         consecutiveFallbacks:
           state.players['player-2'].consecutiveFallbacks,
       },
     },
     pot: state.pot,
-    discard: state.discard,
     history: state.history,
     lastResult: state.lastResult,
     outcome: state.outcome,

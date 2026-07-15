@@ -146,7 +146,7 @@ describe('buildRoundReveal', () => {
     expect(revealed.unseenCenterCounts).toEqual(getUnseenCenterCounts(after))
   })
 
-  it('withholds transferred cards from the recipient hand until result', () => {
+  it('withholds burden growth for the recipient until result', () => {
     const { before, after, result } = findDecisiveRound()
     const sequence = buildRoundReveal(before, after, [
       'player-1',
@@ -155,13 +155,21 @@ describe('buildRoundReveal', () => {
     const recipient = result.recipient
     if (recipient === null) throw new Error('expected recipient')
 
-    const preHand = frameForBeat(sequence, 'center').hands[recipient]
-    const postHand = frameForBeat(sequence, 'result').hands[recipient]
-    expect(postHand.length).toBeGreaterThan(preHand.length)
-    for (const id of result.transferredCardIds) {
-      expect(preHand.some((card) => card.id === id)).toBe(false)
-      expect(postHand.some((card) => card.id === id)).toBe(true)
-    }
+    const pre = frameForBeat(sequence, 'center')
+    const post = frameForBeat(sequence, 'result')
+    expect(pre.burdenSizes[recipient]).toBe(
+      before.players[recipient].burden.length,
+    )
+    expect(post.burdenSizes[recipient]).toBe(
+      after.players[recipient].burden.length,
+    )
+    expect(post.burdenSizes[recipient]).toBeGreaterThan(
+      pre.burdenSizes[recipient],
+    )
+    expect(post.burdenSizes[recipient] - pre.burdenSizes[recipient]).toBe(
+      result.transferredCardIds.length,
+    )
+    expect(post.hands[recipient].length).toBe(pre.hands[recipient].length)
   })
 })
 

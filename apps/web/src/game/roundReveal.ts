@@ -28,6 +28,7 @@ export const REVEAL_MS = {
 export interface RoundRevealFrame {
   readonly beat: RevealBeat
   readonly hands: Readonly<Record<PlayerId, readonly Card[]>>
+  readonly burdenSizes: Readonly<Record<PlayerId, number>>
   readonly pot: readonly Card[]
   readonly visiblePlays: Readonly<Partial<Record<PlayerId, Card>>>
   readonly center: Card | null
@@ -63,6 +64,7 @@ function frame(
     commitOrder: readonly [PlayerId, PlayerId]
     result: RoundResult
     hands: Readonly<Record<PlayerId, readonly Card[]>>
+    burdenSizes: Readonly<Record<PlayerId, number>>
     pot: readonly Card[]
     history: readonly RevealedRound[]
     unseenCenterCounts: SymbolCounts
@@ -79,6 +81,7 @@ function frame(
   return {
     beat,
     hands: args.hands,
+    burdenSizes: args.burdenSizes,
     pot: args.pot,
     visiblePlays,
     center: args.centerFaceUp ? args.result.center : null,
@@ -113,6 +116,14 @@ export function buildRoundReveal(
     'player-1': after.players['player-1'].hand,
     'player-2': after.players['player-2'].hand,
   }
+  const preBurdenSizes: Record<PlayerId, number> = {
+    'player-1': before.players['player-1'].burden.length,
+    'player-2': before.players['player-2'].burden.length,
+  }
+  const postBurdenSizes: Record<PlayerId, number> = {
+    'player-1': after.players['player-1'].burden.length,
+    'player-2': after.players['player-2'].burden.length,
+  }
   const concealedHistory = before.history
   const revealedHistory = after.history
   const concealedUnseen = getUnseenCenterCounts(before)
@@ -127,6 +138,7 @@ export function buildRoundReveal(
     firstPlay: frame('firstPlay', {
       ...shared,
       hands: preHands,
+      burdenSizes: preBurdenSizes,
       pot: before.pot,
       history: concealedHistory,
       unseenCenterCounts: concealedUnseen,
@@ -137,6 +149,7 @@ export function buildRoundReveal(
     secondPlay: frame('secondPlay', {
       ...shared,
       hands: preHands,
+      burdenSizes: preBurdenSizes,
       pot: before.pot,
       history: concealedHistory,
       unseenCenterCounts: concealedUnseen,
@@ -147,6 +160,7 @@ export function buildRoundReveal(
     center: frame('center', {
       ...shared,
       hands: preHands,
+      burdenSizes: preBurdenSizes,
       pot: before.pot,
       history: revealedHistory,
       unseenCenterCounts: revealedUnseen,
@@ -157,6 +171,7 @@ export function buildRoundReveal(
     result: frame('result', {
       ...shared,
       hands: postHands,
+      burdenSizes: postBurdenSizes,
       pot: after.pot,
       history: revealedHistory,
       unseenCenterCounts: revealedUnseen,

@@ -95,9 +95,9 @@ function ResolutionBanner({
       detail = `${playerLabel(result.winner, mode)} aligned; ${playerLabel(
         result.recipient,
         mode,
-      )} receives ${result.transferredCardIds.length} card${
+      )} takes ${result.transferredCardIds.length} card${
         result.transferredCardIds.length === 1 ? '' : 's'
-      }.`
+      } into their burden.`
     }
   }
 
@@ -177,7 +177,7 @@ function MatchResult({
         <p className="eyebrow">{verdict}</p>
         <h2 id="result-title">{title}</h2>
         <p>
-          Lower hand wins. Final score{' '}
+          Lower burden wins. Final score{' '}
           <strong>{outcome.scores['player-1']}</strong>
           <span> — </span>
           <strong>{outcome.scores['player-2']}</strong>
@@ -283,6 +283,12 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
     revealFrame?.unseenCenterCounts ?? getUnseenCenterCounts(match)
   const unseenTotal =
     unseenCounts.sun + unseenCounts.moon + unseenCounts.star
+  const playerOneBurden =
+    revealFrame?.burdenSizes['player-1'] ??
+    match.players['player-1'].burden.length
+  const playerTwoBurden =
+    revealFrame?.burdenSizes['player-2'] ??
+    match.players['player-2'].burden.length
 
   useEffect(() => {
     if (
@@ -344,9 +350,17 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
           </button>
         </header>
         <div className="score-row">
+          <div className="burden-count" aria-label={`${playerLabel('player-1', mode)} burden`}>
+            <span>{playerLabel('player-1', mode)}</span>
+            <strong className="tabular">{playerOneBurden}</strong>
+          </div>
           <div className="center-deck-count">
             <span>Unseen</span>
-            <strong>{unseenTotal}</strong>
+            <strong className="tabular">{unseenTotal}</strong>
+          </div>
+          <div className="burden-count" aria-label={`${playerLabel('player-2', mode)} burden`}>
+            <span>{playerLabel('player-2', mode)}</span>
+            <strong className="tabular">{playerTwoBurden}</strong>
           </div>
         </div>
         <section className="table-region" aria-label="Astral Veil table">

@@ -2,15 +2,13 @@
 
 ## Scope
 
-Astral Veil is an English-only, two-player prediction game for modern WebGL2 browsers. Version 1 includes:
+Astral Veil is an English-only, two-player prediction game for modern browsers. Version 1 includes:
 
 - Singleplayer against Easy, Medium, or Hard algorithmic AI.
 - Hot-seat play on one device.
-- Online casual matchmaking and code-based private rooms.
-- Reconnection to an online seat.
 - A rules reference.
 
-Version 1 intentionally excludes accounts, profiles, rankings, persistent statistics, match history, replays, spectators, custom room rules, and music.
+Version 1 intentionally excludes accounts, profiles, rankings, persistent statistics, match history, replays, spectators, custom rules, and music.
 
 ## Match setup
 
@@ -30,10 +28,10 @@ Version 1 intentionally excludes accounts, profiles, rankings, persistent statis
 
 The center card and both played cards enter the pot.
 
-- Exactly one match is a decisive round. The matching player's card is discarded permanently; the other player receives every other card in the accumulated pot.
+- Exactly one match is a decisive round. The other player receives every card in the accumulated pot into their burden, including the center and both played cards. Burden cards cannot be played.
 - Both players matching or neither matching is a standoff. The entire pot remains in place.
 
-The match ends after a resolved round when either hand is empty or no future center cards remain. Only cards currently in hand count toward the final score; the lower score wins. Equal hand sizes are a draw. A terminal pot remains unclaimed.
+The match ends after a resolved round when either hand is empty or no future center cards remain. Only burden sizes count toward the final score; the lower score wins. Equal burden sizes are a draw. A terminal pot remains unclaimed.
 
 ## Public and private information
 
@@ -41,6 +39,7 @@ Each player can inspect:
 
 - Their own hand composition.
 - The opponent's total hand size, but not its composition.
+- Both players' burden sizes (the running scores). Burden composition is not shown.
 - The public pot's total and Sun/Moon/Star composition.
 - Every center card previously revealed.
 - Counts and probabilities for unseen center cards.
@@ -53,11 +52,11 @@ Previously revealed opponent choices are not presented as a persistent opponent-
 
 - The primary commit gesture is dragging the top card of a symbol stack into the center.
 - An equivalent focus/tap plus “Play card” action supports keyboard, touch, and assistive technology.
-- Cards of the same symbol appear as one physical 3D stack with a visible count.
-- The pot appears as a depth-limited 3D stack with a total count and an inspectable symbol summary.
+- Cards of the same symbol appear as one physical stack with a visible count.
+- The pot appears as a depth-limited stack with a total count and an inspectable symbol summary.
 - Dynamic numbers use tabular figures and all interactive hit areas are at least 40 by 40 CSS pixels.
 
-Hot-seat uses a privacy handoff between choices. The player choosing first alternates each round.
+Hot-seat uses a privacy handoff between choices. The player choosing first alternates each round. Matches are untimed. Singleplayer and hot-seat offer immediate rematch.
 
 ## Probability panel
 
@@ -73,19 +72,6 @@ AI is local algorithmic game logic, not a generative model or external service. 
 
 Hard AI forgets its model when the match ends.
 
-## Online play
-
-- Online matches use the same rules and 30-second choice clock in casual matchmaking and private rooms.
-- Singleplayer and hot-seat are untimed.
-- On timeout, the server commits the player's most abundant symbol, breaking equal counts Sun, then Moon, then Star.
-- Two consecutive timeouts are abandonment and immediately award the match to the opponent.
-- A deliberate leave is also abandonment.
-- A disconnected player's seat is recoverable for 60 seconds while the choice clock continues. A committed choice survives reconnect.
-- Private rooms have one fixed ruleset and no configurable variants.
-- Singleplayer and hot-seat offer immediate rematch. A private-room rematch requires both players to accept. Casual “Play again” returns to matchmaking.
-- After 15 seconds in an empty casual queue, the UI offers an explicit switch to an AI match without silently substituting a bot.
-- Guests use locally persisted, safely generated display names with reroll and no free-text naming.
-
 ## Visual direction
 
 - Theme: obsidian and aged brass.
@@ -93,8 +79,8 @@ Hard AI forgets its model when the match ends.
 - Moon: asymmetric silver and indigo crescent.
 - Star: faceted cyan and violet star.
 - Shape, not color alone, distinguishes every symbol.
-- Cards use procedural beveled geometry, PBR materials, metallic inlays, engraved symbols, reflections, and generated surface variation.
-- React Three Fiber renders the table, cards, lighting, shadows, and postprocessing. React DOM renders menus, HUD, probabilities, clocks, dialogs, and accessible controls.
+- Cards use beveled presentation with metallic inlays, engraved symbols, and surface variation.
+- The table and cards render in the game client; React DOM renders menus, HUD, probabilities, dialogs, and accessible controls.
 - Mobile portrait is a complete experience; landscape and desktop expand the table composition.
 
 Quality scales automatically:
@@ -111,16 +97,13 @@ Version 1 includes restrained card and result sound effects, mute/volume control
 
 The pnpm workspace is divided into:
 
-- `apps/web`: React, Vite, TypeScript, Tailwind CSS, Motion, React Three Fiber, and Zustand.
-- `apps/realtime`: Cloudflare Worker and Durable Objects for WebSockets.
+- `apps/web`: React, Vite, TypeScript, Tailwind CSS, Motion, and Zustand.
 - `packages/engine`: pure deterministic rules, projections, simulation, and algorithmic AI.
-- `packages/protocol`: validated, typed WebSocket messages.
 
-Online clients send intentions only. A match Durable Object validates actions and runs the authoritative engine, returning a player-specific projection that redacts the hidden center, deck order, opponent hand composition, and un-revealed opponent choice. The same engine runs locally for singleplayer and hot-seat.
+The engine runs locally for singleplayer and hot-seat. Player-specific projections redact the hidden center, deck order, opponent hand composition, and un-revealed opponent choice.
 
-Implementation proceeds in four slices:
+Implementation proceeds in three slices:
 
 1. Engine, simulation, and tests.
-2. Polished 3D singleplayer and hot-seat.
-3. Private rooms, casual matchmaking, and reconnect.
-4. Audio, accessibility, adaptive performance, and end-to-end hardening.
+2. Polished singleplayer and hot-seat.
+3. Audio, accessibility, adaptive performance, and end-to-end hardening.

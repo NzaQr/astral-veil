@@ -18,6 +18,7 @@ export interface MatchConfig {
 
 export interface PlayerState {
   readonly hand: readonly Card[]
+  readonly burden: readonly Card[]
   readonly committed: Card | null
   readonly consecutiveFallbacks: number
 }
@@ -39,7 +40,6 @@ export interface RoundResult {
   readonly winner: PlayerId | null
   readonly recipient: PlayerId | null
   readonly transferredCardIds: readonly string[]
-  readonly discardedCardId: string | null
   readonly potSize: number
 }
 
@@ -57,7 +57,6 @@ export interface MatchState {
   readonly currentCenter: Card | null
   readonly players: Readonly<Record<PlayerId, PlayerState>>
   readonly pot: readonly Card[]
-  readonly discard: readonly Card[]
   readonly history: readonly RevealedRound[]
   readonly lastResult: RoundResult | null
   readonly outcome: MatchOutcome | null
@@ -85,13 +84,13 @@ export interface PublicMatchView {
       PlayerId,
       {
         readonly handSize: number
+        readonly burdenSize: number
         readonly hasCommitted: boolean
         readonly consecutiveFallbacks: number
       }
     >
   >
   readonly pot: readonly Card[]
-  readonly discard: readonly Card[]
   readonly history: readonly RevealedRound[]
   readonly lastResult: RoundResult | null
   readonly outcome: MatchOutcome | null

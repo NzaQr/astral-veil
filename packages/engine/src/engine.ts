@@ -91,17 +91,18 @@ export function createMatch(
     players: {
       'player-1': {
         hand: playerOneHand,
+        burden: [],
         committed: null,
         consecutiveFallbacks: 0,
       },
       'player-2': {
         hand: playerTwoHand,
+        burden: [],
         committed: null,
         consecutiveFallbacks: 0,
       },
     },
     pot: [],
-    discard: [],
     history: [],
     lastResult: null,
     outcome: null,
@@ -128,8 +129,8 @@ function scoreOutcome(
   forcedWinner?: PlayerId,
 ): MatchOutcome {
   const scores = {
-    'player-1': players['player-1'].hand.length,
-    'player-2': players['player-2'].hand.length,
+    'player-1': players['player-1'].burden.length,
+    'player-2': players['player-2'].burden.length,
   }
   let winner: PlayerId | null = forcedWinner ?? null
   if (forcedWinner === undefined) {
@@ -167,24 +168,18 @@ function resolveCommittedRound(state: MatchState): MatchState {
   ]
 
   let nextPot: readonly Card[] = currentPot
-  let nextDiscard = state.discard
   let nextPlayers: MatchState['players'] = {
     'player-1': { ...state.players['player-1'], committed: null },
     'player-2': { ...state.players['player-2'], committed: null },
   }
   let transferredCardIds: readonly string[] = []
-  let discardedCardId: string | null = null
 
   if (winner !== null && recipient !== null) {
-    const discarded = winner === 'player-1' ? playerOneCard : playerTwoCard
-    const transferred = currentPot.filter((card) => card.id !== discarded.id)
     nextPot = []
-    nextDiscard = [...state.discard, discarded]
-    discardedCardId = discarded.id
-    transferredCardIds = transferred.map((card) => card.id)
+    transferredCardIds = currentPot.map((card) => card.id)
     nextPlayers = replacePlayer(nextPlayers, recipient, {
       ...nextPlayers[recipient],
-      hand: [...nextPlayers[recipient].hand, ...transferred],
+      burden: [...nextPlayers[recipient].burden, ...currentPot],
     })
   }
 
@@ -200,7 +195,6 @@ function resolveCommittedRound(state: MatchState): MatchState {
     winner,
     recipient,
     transferredCardIds,
-    discardedCardId,
     potSize: currentPot.length,
   }
   const history = [
@@ -225,7 +219,6 @@ function resolveCommittedRound(state: MatchState): MatchState {
     currentCenter: null,
     players: nextPlayers,
     pot: nextPot,
-    discard: nextDiscard,
     history,
     lastResult: result,
     outcome: isTerminal ? scoreOutcome(nextPlayers) : null,
@@ -251,6 +244,7 @@ function commitWithoutResolution(
   }
   const nextPlayer: PlayerState = {
     hand: player.hand.filter((candidate) => candidate.id !== cardId),
+    burden: player.burden,
     committed: card,
     consecutiveFallbacks: fallback ? player.consecutiveFallbacks + 1 : 0,
   }
@@ -361,15 +355,16 @@ export function validateConservation(state: MatchState): {
     ...state.centralDeck,
     ...(state.currentCenter === null ? [] : [state.currentCenter]),
     ...state.players['player-1'].hand,
+    ...state.players['player-1'].burden,
     ...(state.players['player-1'].committed === null
       ? []
       : [state.players['player-1'].committed]),
     ...state.players['player-2'].hand,
+    ...state.players['player-2'].burden,
     ...(state.players['player-2'].committed === null
       ? []
       : [state.players['player-2'].committed]),
     ...state.pot,
-    ...state.discard,
   ]
   const errors: string[] = []
   const actualIds = cards.map((card) => card.id)

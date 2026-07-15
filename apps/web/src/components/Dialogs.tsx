@@ -80,8 +80,8 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
     >
       <div className="rules-copy">
         <p className="rules-lead">
-          Read the center deck, manage a finite hand, and finish with fewer
-          cards than your opponent.
+          Read the center deck, manage a finite hand, and finish with a smaller
+          burden than your opponent.
         </p>
         <ol className="rule-steps">
           <li>
@@ -110,9 +110,10 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
               <h3>Resolve the omen</h3>
               <p>
                 Exactly one match is a decisive round. The other player takes
-                every card in the accumulated pot — the center and both played
-                cards, plus anything left from prior standoffs. If both or
-                neither match, it is a standoff and the pot stays.
+                every card in the accumulated pot into their burden — the center
+                and both played cards, plus anything left from prior standoffs.
+                Burden cards cannot be played. If both or neither match, it is a
+                standoff and the pot stays.
               </p>
             </div>
           </li>
@@ -129,9 +130,8 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
           <h3>How a match ends</h3>
           <p>
             After a resolved round, the match ends if either hand is empty or
-            no future center cards remain. Only cards still in hand count:
-            lower score wins, equal scores draw. A terminal unclaimed pot stays
-            unclaimed.
+            no future center cards remain. Only burden sizes count: lower score
+            wins, equal scores draw. A terminal unclaimed pot stays unclaimed.
           </p>
         </div>
       </div>

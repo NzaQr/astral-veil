@@ -59,6 +59,8 @@ describe('match creation and round resolution', () => {
     expect(state.centralDeck).toHaveLength(14)
     expect(state.players['player-1'].hand).toHaveLength(9)
     expect(state.players['player-2'].hand).toHaveLength(9)
+    expect(state.players['player-1'].burden).toHaveLength(0)
+    expect(state.players['player-2'].burden).toHaveLength(0)
     expect(validateConservation(state)).toEqual({ valid: true, errors: [] })
   })
 
@@ -90,9 +92,12 @@ describe('match creation and round resolution', () => {
     expect(resolved.phase).toBe('resolved')
     expect(resolved.lastResult?.kind).toBe('decisive')
     expect(resolved.lastResult?.winner).toBe('player-1')
-    expect(resolved.discard).toHaveLength(1)
+    expect(resolved.lastResult?.recipient).toBe('player-2')
+    expect(resolved.lastResult?.transferredCardIds).toHaveLength(3)
     expect(resolved.players['player-1'].hand).toHaveLength(8)
-    expect(resolved.players['player-2'].hand).toHaveLength(10)
+    expect(resolved.players['player-2'].hand).toHaveLength(8)
+    expect(resolved.players['player-1'].burden).toHaveLength(0)
+    expect(resolved.players['player-2'].burden).toHaveLength(3)
     expect(resolved.pot).toHaveLength(0)
     expect(validateConservation(resolved).valid).toBe(true)
   })
@@ -110,10 +115,17 @@ describe('match creation and round resolution', () => {
     )
 
     expect(resolved.lastResult?.winner).toBe('player-2')
-    expect(resolved.players['player-1'].hand).toHaveLength(10)
+    expect(resolved.lastResult?.recipient).toBe('player-1')
+    expect(resolved.players['player-1'].hand).toHaveLength(8)
     expect(resolved.players['player-2'].hand).toHaveLength(8)
-    expect(resolved.discard[0]?.id).toBe(
-      resolved.lastResult?.plays['player-2'].id,
+    expect(resolved.players['player-1'].burden).toHaveLength(3)
+    expect(resolved.players['player-2'].burden).toHaveLength(0)
+    expect(resolved.lastResult?.transferredCardIds).toEqual(
+      expect.arrayContaining([
+        resolved.lastResult?.plays['player-1'].id,
+        resolved.lastResult?.plays['player-2'].id,
+        resolved.lastResult?.center.id,
+      ]),
     )
   })
 
@@ -128,7 +140,6 @@ describe('match creation and round resolution', () => {
     expect(resolved.lastResult?.kind).toBe('standoff')
     expect(resolved.lastResult?.winner).toBeNull()
     expect(resolved.pot).toHaveLength(3)
-    expect(resolved.discard).toHaveLength(0)
     expect(resolved.players['player-1'].hand).toHaveLength(8)
     expect(resolved.players['player-2'].hand).toHaveLength(8)
   })
@@ -169,10 +180,11 @@ describe('match creation and round resolution', () => {
     )
 
     expect(decisive.lastResult?.potSize).toBe(6)
-    expect(decisive.lastResult?.transferredCardIds).toHaveLength(5)
+    expect(decisive.lastResult?.transferredCardIds).toHaveLength(6)
     expect(decisive.pot).toHaveLength(0)
-    expect(decisive.discard).toHaveLength(1)
-    expect(decisive.players['player-2'].hand).toHaveLength(12)
+    expect(decisive.players['player-1'].hand).toHaveLength(7)
+    expect(decisive.players['player-2'].hand).toHaveLength(7)
+    expect(decisive.players['player-2'].burden).toHaveLength(6)
     expect(validateConservation(decisive).valid).toBe(true)
   })
 
@@ -283,7 +295,7 @@ describe('fallbacks, abandonment, and secrecy', () => {
     expect(abandoned.outcome?.reason).toBe('abandonment')
   })
 
-  it('redacts center order, opponent hand, and opponent commitment', () => {
+  it('redacts center order, opponent hand, burden cards, and opponent commitment', () => {
     const initial = createMatch(90)
     const opponentCard = initial.players['player-2'].hand[0]
     if (opponentCard === undefined || initial.currentCenter === null) {
@@ -295,13 +307,40 @@ describe('fallbacks, abandonment, and secrecy', () => {
 
     expect(view.players['player-2'].hasCommitted).toBe(true)
     expect(view.players['player-2'].handSize).toBe(8)
+    expect(view.players['player-1'].burdenSize).toBe(0)
+    expect(view.players['player-2'].burdenSize).toBe(0)
     expect(view.hand).toEqual(initial.players['player-1'].hand)
     expect(serialized).not.toContain(opponentCard.id)
     expect(serialized).not.toContain(initial.currentCenter.id)
+    expect(serialized).not.toContain('"burden"')
     expect(serialized).not.toContain('centralDeck')
     expect(serialized).not.toContain('currentCenter')
     expect(view.unseenCenterTotal).toBe(15)
     expect(view.unseenCenterCounts).toEqual({ sun: 5, moon: 5, star: 5 })
+  })
+
+  it('scores the match from burden sizes, not hand sizes', () => {
+    const initial = createMatch(92)
+    const center = initial.currentCenter
+    if (center === null) {
+      throw new Error('Missing center')
+    }
+    const resolved = resolveWith(
+      initial,
+      center.symbol,
+      otherSymbol(center.symbol),
+    )
+    expect(resolved.players['player-1'].hand).toHaveLength(8)
+    expect(resolved.players['player-2'].hand).toHaveLength(8)
+    expect(resolved.players['player-2'].burden).toHaveLength(3)
+
+    const abandoned = abandonMatch(resolved, 'player-2')
+
+    expect(abandoned.outcome).toEqual({
+      winner: 'player-1',
+      reason: 'abandonment',
+      scores: { 'player-1': 0, 'player-2': 3 },
+    })
   })
 
   it('makes revealed history and public pot composition visible', () => {

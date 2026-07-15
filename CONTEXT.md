@@ -12,24 +12,8 @@ _Avoid_: Game, session
 A local match in which players alternate access to one device behind a privacy handoff.
 _Avoid_: Couch multiplayer, pass-and-play
 
-**Online seat**:
-A player's recoverable place in an online match.
-_Avoid_: Connection, socket
-
-**Guest**:
-A player represented by a device-bound identity and a safely generated display name, without a registered account.
-_Avoid_: User, account
-
-**Casual queue**:
-The unranked public waiting pool that pairs two available players without a skill rating.
-_Avoid_: Ranked queue, ladder
-
-**Private room**:
-An invite-only online gathering identified by a shareable code and containing one match and its two players.
-_Avoid_: Lobby
-
 **Hand**:
-The cards a player currently owns and may play. Its composition is private to that player, while its size is public and serves as the player's score.
+The cards a player currently owns and may play. Its composition is private to that player, while its size is public.
 _Avoid_: Player deck
 
 **Committed selection**:
@@ -49,7 +33,7 @@ A round in which exactly one player matches the center card.
 _Avoid_: Won round
 
 **Draw**:
-A completed match in which both players have the same final hand size.
+A completed match in which both players have the same final burden size.
 _Avoid_: Match tie
 
 **Unseen center cards**:
@@ -60,6 +44,10 @@ _Avoid_: Remaining deck
 The public shared collection of revealed cards carried across standoffs and claimed after a decisive round.
 _Avoid_: Pile, pool
 
+**Burden**:
+A player's personal collection of cards received from claimed pots; those cards cannot be played. Only its size is public, and that size is the player's score.
+_Avoid_: Pozo propio, penalty pile, taken pile, vault
+
 **Pattern break**:
 A deliberate departure from an established selection pattern intended to make future choices harder for an opponent to predict.
 _Avoid_: Bluff
@@ -69,7 +57,7 @@ An algorithmic opponent constrained to information and memories available to a h
 _Avoid_: Cheating AI
 
 **Fallback selection**:
-The automatic legal choice made when an online player does not commit before their choice window expires.
+The automatic legal choice made when a player does not commit before their choice window expires.
 _Avoid_: Auto-play, timeout move
 
 **Abandonment**:

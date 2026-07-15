@@ -368,25 +368,6 @@ p {
   color: rgba(29, 20, 10, 0.63);
 }
 
-.online-button:disabled {
-  opacity: 0.54;
-}
-
-.online-button:disabled span::after {
-  padding: 0.2rem 0.38rem;
-  margin-left: 0.55rem;
-  border-radius: 99px;
-  color: #bda77f;
-  background: rgba(198, 165, 105, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(198, 165, 105, 0.15);
-  content: "SOON";
-  font-family: var(--font-sans);
-  font-size: 0.5rem;
-  font-weight: 750;
-  letter-spacing: 0.1em;
-  vertical-align: middle;
-}
-
 .menu-utility {
   display: flex;
   margin-top: 1.25rem;
@@ -674,22 +655,25 @@ p {
 .score-row {
   z-index: 18;
   display: flex;
+  gap: 0.65rem;
   padding: 0.25rem max(1rem, env(safe-area-inset-right)) 0.45rem;
   background: rgba(5, 6, 8, 0.62);
   align-items: center;
   justify-content: center;
 }
 
-.center-deck-count {
-  width: 4.2rem;
-  padding: 0.28rem;
+.center-deck-count,
+.burden-count {
+  min-width: 4.2rem;
+  padding: 0.28rem 0.45rem;
   border-radius: 0.65rem;
   background: rgba(255, 255, 255, 0.025);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
   text-align: center;
 }
 
-.center-deck-count span {
+.center-deck-count span,
+.burden-count span {
   display: block;
   color: #6e6870;
   font-size: 0.48rem;
@@ -697,12 +681,17 @@ p {
   text-transform: uppercase;
 }
 
-.center-deck-count strong {
+.center-deck-count strong,
+.burden-count strong {
   color: #b3abc2;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+}
+
+.burden-count strong {
+  color: #c4a574;
 }
 
 .table-region {

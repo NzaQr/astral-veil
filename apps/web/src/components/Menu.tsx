@@ -68,7 +68,7 @@ function Home({ reducedMotion }: { reducedMotion: boolean }) {
           <h1>Astral Veil</h1>
           <p className="menu-intro">
             Read the unseen. Break the pattern. Leave the table with the
-            lighter hand.
+            lighter burden.
           </p>
         </motion.div>
         <motion.nav
@@ -92,15 +92,6 @@ function Home({ reducedMotion }: { reducedMotion: boolean }) {
           >
             <span>Hot Seat</span>
             <small>Two players, one device</small>
-          </button>
-          <button
-            className="secondary-button online-button"
-            type="button"
-            disabled
-            aria-describedby="online-note"
-          >
-            <span>Online</span>
-            <small id="online-note">Arriving in the next slice</small>
           </button>
         </motion.nav>
         <motion.div
