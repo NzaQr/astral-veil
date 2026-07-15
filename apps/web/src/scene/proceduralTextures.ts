@@ -88,9 +88,9 @@ export interface CardImperfections {
   normalMap: CanvasTexture
 }
 
-const cardCache = new Map<TextureQuality, CardImperfections>()
+const cardCache = new Map<string, CardImperfections>()
 const tableCache = new Map<
-  TextureQuality,
+  string,
   { map: CanvasTexture; roughnessMap: CanvasTexture }
 >()
 
@@ -127,8 +127,8 @@ function buildCardImperfections(quality: TextureQuality): CardImperfections {
         const heightR = fbm(u + 1 / s, v, 7.2, 4)
         const heightD = fbm(u, v - 1 / s, 7.2, 4)
         const heightU = fbm(u, v + 1 / s, 7.2, 4)
-        const dx = (heightL - heightR) * 2.4
-        const dy = (heightD - heightU) * 2.4
+        const dx = (heightL - heightR) * 1.1
+        const dy = (heightD - heightU) * 1.1
         const i = (y * s + x) * 4
         image.data[i] = Math.floor((dx * 0.5 + 0.5) * 255)
         image.data[i + 1] = Math.floor((dy * 0.5 + 0.5) * 255)
@@ -149,10 +149,11 @@ function buildCardImperfections(quality: TextureQuality): CardImperfections {
 export function createCardImperfections(
   quality: TextureQuality,
 ): CardImperfections {
-  const cached = cardCache.get(quality)
+  const key = `card-v2-${quality}`
+  const cached = cardCache.get(key)
   if (cached !== undefined) return cached
   const maps = buildCardImperfections(quality)
-  cardCache.set(quality, maps)
+  cardCache.set(key, maps)
   return maps
 }
 
@@ -210,10 +211,11 @@ export function createTableTextures(quality: TextureQuality): {
   map: CanvasTexture
   roughnessMap: CanvasTexture
 } {
-  const cached = tableCache.get(quality)
+  const key = `table-v2-${quality}`
+  const cached = tableCache.get(key)
   if (cached !== undefined) return cached
   const maps = buildTableTextures(quality)
-  tableCache.set(quality, maps)
+  tableCache.set(key, maps)
   return maps
 }
 
