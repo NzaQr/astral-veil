@@ -1,0 +1,21 @@
+{
+  "name": "@astral-veil/engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src test",
+    "test": "vitest run",
+    "simulate": "tsc -p tsconfig.cli.json && node node_modules/.simulation/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "oxlint": "^1.74.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "astral-veil",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "simulate": "pnpm --filter @astral-veil/engine simulate"
+  }
+}
