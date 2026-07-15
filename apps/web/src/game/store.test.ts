@@ -28,14 +28,14 @@ describe('game session orchestration', () => {
     useGameStore.getState().commitSymbol('moon')
     state = useGameStore.getState()
     expect(state.match?.phase).toBe('resolved')
-    expect(state.revealStage).toBe('players')
+    expect(state.revealStage).toBe('player')
     const resolvedMatch = state.match
     if (resolvedMatch === null) throw new Error('Expected a resolved match')
-    const concealedCounts = visibleUnseenCounts(resolvedMatch, 'players')
+    const concealedCounts = visibleUnseenCounts(resolvedMatch, 'player')
     expect(
       concealedCounts.sun + concealedCounts.moon + concealedCounts.star,
     ).toBe(15)
-    expect(visibleCenterHistory(resolvedMatch, 'players')).toHaveLength(0)
+    expect(visibleCenterHistory(resolvedMatch, 'player')).toHaveLength(0)
 
     state.setRevealStage('result')
     state.continueRound()
@@ -59,6 +59,6 @@ describe('game session orchestration', () => {
     expect(afterSecond.match?.history).toHaveLength(1)
     expect(afterSecond.match).toBe(afterFirst.match)
     expect(afterFirst.aiRngState).not.toBe(rngBefore)
-    expect(afterFirst.revealStage).toBe('players')
+    expect(afterFirst.revealStage).toBe('player')
   })
 })

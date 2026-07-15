@@ -24,12 +24,12 @@ export function WinHighlight({
   })
 
   const x =
-    recipientSide === 'left' ? -1.0 : recipientSide === 'right' ? 1.0 : 0
+    recipientSide === 'left' ? -0.95 : recipientSide === 'right' ? 0.95 : 0
 
   return (
     <mesh
       ref={ring}
-      position={[x, 0.004, 0.25]}
+      position={[x, 0.004, 0.28]}
       rotation={[-Math.PI / 2, 0, 0]}
       visible={active}
     >

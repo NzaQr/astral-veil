@@ -19,7 +19,12 @@ import {
 
 export type Screen = 'home' | 'difficulty' | 'match'
 export type MatchMode = 'solo' | 'hot-seat'
-export type RevealStage = 'choosing' | 'players' | 'center' | 'result'
+export type RevealStage =
+  | 'choosing'
+  | 'player'
+  | 'opponent'
+  | 'center'
+  | 'result'
 export type DialogName = 'rules' | 'settings'
 export type QualityPreference = 'auto' | 'high' | 'medium' | 'low'
 export type MotionPreference = 'system' | 'reduce' | 'full'
@@ -197,7 +202,7 @@ export const useGameStore = create<GameStore>()(
           selectedSymbol: null,
           revealStage:
             nextMatch.phase === 'resolved' || nextMatch.phase === 'complete'
-              ? 'players'
+              ? 'player'
               : 'choosing',
         })
       },
@@ -221,7 +226,7 @@ export const useGameStore = create<GameStore>()(
         set({
           match: nextMatch,
           aiRngState: choice.rngState,
-          revealStage: 'players',
+          revealStage: 'player',
         })
       },
       setRevealStage: (revealStage) => set({ revealStage }),
@@ -283,5 +288,5 @@ export function getActiveViewer(
 }
 
 export function getAiDelay(rngState: number, reducedMotion: boolean): number {
-  return reducedMotion ? 0 : 460 + (rngState % 280)
+  return reducedMotion ? 0 : 900 + (rngState % 400)
 }

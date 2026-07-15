@@ -24,6 +24,7 @@ import {
   type MatchMode,
   type RuntimeQuality,
 } from '../game/store'
+import { revealDelay, resultHoldMs } from '../game/revealTiming'
 
 function playerLabel(player: PlayerId, mode: MatchMode): string {
   if (mode === 'solo') return player === 'player-1' ? 'You' : 'Veil AI'
@@ -227,11 +228,15 @@ function ResolutionBanner({
   const result = match.lastResult
   if (result === null || stage === 'choosing') return null
 
-  let title = 'Commitments revealed'
-  let detail = 'The center remains behind the veil.'
+  let title = 'Your card is on the table'
+  let detail = 'Wait for the opposing play.'
+  if (stage === 'opponent') {
+    title = 'Both plays are visible'
+    detail = 'Read the commitments before the center lifts.'
+  }
   if (stage === 'center') {
     title = `${symbolName(result.center.symbol)} at the center`
-    detail = 'The alignment is now known.'
+    detail = 'Compare each play to the revealed center.'
   }
   if (stage === 'result') {
     if (result.kind === 'standoff') {
@@ -267,7 +272,7 @@ function ResolutionBanner({
       <p>{detail}</p>
       {stage === 'result' && match.phase === 'resolved' && (
         <button type="button" onClick={continueRound}>
-          Continue to round {match.round + 1}
+          Continue now
         </button>
       )}
     </motion.div>
@@ -410,6 +415,7 @@ export function MatchScreen({
   const handoffAccepted = useGameStore((state) => state.handoffAccepted)
   const performAiCommit = useGameStore((state) => state.performAiCommit)
   const setRevealStage = useGameStore((state) => state.setRevealStage)
+  const continueRound = useGameStore((state) => state.continueRound)
   const exitMatch = useGameStore((state) => state.exitMatch)
   const openDialog = useGameStore((state) => state.openDialog)
   const qualityPreference = useGameStore((state) => state.quality)
@@ -449,10 +455,19 @@ export function MatchScreen({
   }, [match, mode, performAiCommit, reducedMotion])
 
   useEffect(() => {
-    if (revealStage !== 'players') return
+    if (revealStage !== 'player') return
+    const timer = window.setTimeout(
+      () => setRevealStage('opponent'),
+      revealDelay('player', reducedMotion),
+    )
+    return () => window.clearTimeout(timer)
+  }, [reducedMotion, revealStage, setRevealStage])
+
+  useEffect(() => {
+    if (revealStage !== 'opponent') return
     const timer = window.setTimeout(
       () => setRevealStage('center'),
-      reducedMotion ? 160 : 720,
+      revealDelay('opponent', reducedMotion),
     )
     return () => window.clearTimeout(timer)
   }, [reducedMotion, revealStage, setRevealStage])
@@ -461,10 +476,19 @@ export function MatchScreen({
     if (revealStage !== 'center') return
     const timer = window.setTimeout(
       () => setRevealStage('result'),
-      reducedMotion ? 180 : 860,
+      revealDelay('center', reducedMotion),
     )
     return () => window.clearTimeout(timer)
   }, [reducedMotion, revealStage, setRevealStage])
+
+  useEffect(() => {
+    if (revealStage !== 'result' || match.phase !== 'resolved') return
+    const timer = window.setTimeout(
+      () => continueRound(),
+      resultHoldMs(reducedMotion),
+    )
+    return () => window.clearTimeout(timer)
+  }, [continueRound, match.phase, reducedMotion, revealStage])
 
   return (
     <main className="match-screen">

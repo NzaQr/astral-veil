@@ -69,17 +69,15 @@ function TableSurface({ quality }: { quality: RuntimeQuality }) {
 
   return (
     <group>
-      {/* Pedestal body — well below the play surface */}
       <mesh receiveShadow position={[0, -0.22, 0]}>
         <cylinderGeometry args={[5.85, 6.0, 0.4, 64]} />
         <meshStandardMaterial
-          color="#1c1814"
-          metalness={0.35}
-          roughness={0.55}
+          color="#3a3228"
+          metalness={0.2}
+          roughness={0.62}
         />
       </mesh>
 
-      {/* Single felt play surface at y = 0 */}
       <mesh
         receiveShadow
         position={[0, TABLE_Y, 0]}
@@ -87,33 +85,31 @@ function TableSurface({ quality }: { quality: RuntimeQuality }) {
       >
         <circleGeometry args={[5.45, 96]} />
         <meshStandardMaterial
-          color="#0d1016"
+          color="#3a4552"
           map={textures.map}
           roughnessMap={textures.roughnessMap}
-          roughness={0.88}
-          metalness={0.06}
-          envMapIntensity={0.35}
+          roughness={0.82}
+          metalness={0.04}
+          envMapIntensity={0.45}
         />
       </mesh>
 
-      {/* Outer brass rim — raised slightly, no overlap with felt */}
       <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[5.45, 5.62, 96]} />
         <meshStandardMaterial
-          color="#8a6b40"
-          metalness={0.7}
-          roughness={0.35}
-          envMapIntensity={0.7}
+          color="#b08a52"
+          metalness={0.55}
+          roughness={0.4}
+          envMapIntensity={0.6}
         />
       </mesh>
 
-      {/* Subtle center ring */}
       <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.42, 1.48, 64]} />
         <meshStandardMaterial
-          color="#5a4632"
-          metalness={0.55}
-          roughness={0.42}
+          color="#8a7050"
+          metalness={0.4}
+          roughness={0.48}
         />
       </mesh>
     </group>
@@ -137,7 +133,9 @@ function CameraRig({
     const mobile = size.width < 720
     const revealTight =
       !reducedMotion &&
-      (revealStage === 'center' || revealStage === 'result')
+      (revealStage === 'opponent' ||
+        revealStage === 'center' ||
+        revealStage === 'result')
     const selectionNudge =
       !reducedMotion && selectedSymbol !== null && revealStage === 'choosing'
 
@@ -186,12 +184,12 @@ function CameraRig({
 function SceneLighting({ quality }: { quality: RuntimeQuality }) {
   return (
     <>
-      <hemisphereLight args={['#7a8498', '#1a1612', 0.45]} />
-      <ambientLight intensity={0.35} color="#d8d0c4" />
+      <hemisphereLight args={['#c8d0e0', '#4a3c30', 0.85]} />
+      <ambientLight intensity={0.95} color="#f2ebe0" />
       <directionalLight
-        position={[-3.5, 9, 4]}
-        color="#f2e2c4"
-        intensity={quality === 'low' ? 1.4 : 1.85}
+        position={[0, 10, 2]}
+        color="#fff4e4"
+        intensity={quality === 'low' ? 1.6 : 2.1}
         castShadow={quality !== 'low'}
         shadow-mapSize={quality === 'high' ? 2048 : 1024}
         shadow-bias={-0.00015}
@@ -203,27 +201,39 @@ function SceneLighting({ quality }: { quality: RuntimeQuality }) {
         shadow-camera-top={7}
         shadow-camera-bottom={-7}
       />
+      <directionalLight
+        position={[-4, 6, 3]}
+        color="#ffe2b8"
+        intensity={0.55}
+      />
       <pointLight
-        position={[3.5, 3.2, -2.2]}
-        color="#6a78b8"
-        intensity={8}
+        position={[3.2, 2.8, 1.5]}
+        color="#d8e0ff"
+        intensity={14}
+        distance={14}
+        decay={2}
+      />
+      <pointLight
+        position={[-2.8, 2.4, 2.2]}
+        color="#ffd4a0"
+        intensity={10}
         distance={12}
         decay={2}
       />
       <Environment resolution={quality === 'high' ? 128 : 64}>
         <Lightformer
           form="rect"
-          intensity={1.6}
-          color="#e0c49a"
-          position={[-3, 4, 2]}
-          scale={[3.5, 2.5, 1]}
+          intensity={2.4}
+          color="#ffe6c4"
+          position={[0, 5, 1]}
+          scale={[6, 3, 1]}
         />
         <Lightformer
           form="rect"
-          intensity={0.7}
-          color="#8890c0"
-          position={[4, 2, -3]}
-          scale={[2.5, 2, 1]}
+          intensity={1.1}
+          color="#c8d2f0"
+          position={[4, 2, -2]}
+          scale={[3, 2, 1]}
         />
       </Environment>
     </>
@@ -261,6 +271,17 @@ function SceneContent({
     (mode === 'solo' || handoffAccepted)
   const result = match.lastResult
   const isReveal = revealStage !== 'choosing' && result !== null
+  const showPlayerOne =
+    isReveal &&
+    (revealStage === 'player' ||
+      revealStage === 'opponent' ||
+      revealStage === 'center' ||
+      revealStage === 'result')
+  const showPlayerTwo =
+    isReveal &&
+    (revealStage === 'opponent' ||
+      revealStage === 'center' ||
+      revealStage === 'result')
   const centerFaceUp =
     revealStage === 'center' || revealStage === 'result'
   const visibleHistory = visibleCenterHistory(match, revealStage)
@@ -269,16 +290,20 @@ function SceneContent({
   ).slice(-5)
 
   const winnerSide =
-    result?.kind === 'decisive' && revealStage === 'result'
-      ? result.recipient === 'player-1'
+    result?.kind === 'decisive' &&
+    revealStage === 'result' &&
+    result.winner !== null
+      ? result.winner === 'player-1'
         ? 'left'
         : 'right'
       : null
+  const loserSide =
+    winnerSide === 'left' ? 'right' : winnerSide === 'right' ? 'left' : null
 
   return (
     <>
-      <color attach="background" args={['#06080c']} />
-      <fog attach="fog" args={['#06080c', 14, 28]} />
+      <color attach="background" args={['#1a1e26']} />
+      <fog attach="fog" args={['#1a1e26', 18, 36]} />
       <SceneLighting quality={quality} />
       <CameraRig
         revealStage={revealStage}
@@ -292,7 +317,7 @@ function SceneContent({
           key={`${viewer}-${symbol}`}
           symbol={symbol}
           count={handCounts[symbol]}
-          position={[(index - 1) * 1.35, CARD_REST_Y, 2.55]}
+          position={[(index - 1) * 1.2, CARD_REST_Y, 2.45]}
           interactive={canCommit}
           selected={selected === symbol}
           reducedMotion={reducedMotion}
@@ -305,7 +330,7 @@ function SceneContent({
       <CardStack
         symbol="moon"
         count={opponentHand.length}
-        position={[0, CARD_REST_Y, -2.65]}
+        position={[0, CARD_REST_Y, -2.55]}
         faceUp={false}
         textureQuality={quality}
       />
@@ -320,48 +345,57 @@ function SceneContent({
         />
       )}
 
+      {showPlayerOne && result !== null && (
+        <SingleCard
+          symbol={result.plays['player-1'].symbol}
+          position={[-0.95, CARD_REST_Y + 0.01, 0.28]}
+          faceUp
+          fromPosition={[-1.4, CARD_REST_Y + 0.2, 1.5]}
+          reducedMotion={reducedMotion}
+          textureQuality={quality}
+          highlighted={winnerSide === 'left'}
+          dimmed={loserSide === 'left'}
+        />
+      )}
+
       {isReveal && result !== null && (
-        <>
-          <SingleCard
-            symbol={result.plays['player-1'].symbol}
-            position={[-1.0, CARD_REST_Y + 0.01, 0.25]}
-            faceUp
-            fromPosition={[-1.5, CARD_REST_Y + 0.25, 1.6]}
-            reducedMotion={reducedMotion}
-            textureQuality={quality}
-            highlighted={winnerSide === 'left'}
-          />
-          <SingleCard
-            symbol={result.center.symbol}
-            position={[0, CARD_REST_Y + 0.02, -0.15]}
-            faceUp={centerFaceUp}
-            fromPosition={[0, CARD_REST_Y + 0.35, -0.15]}
-            reducedMotion={reducedMotion}
-            textureQuality={quality}
-            highlighted={revealStage === 'center' || revealStage === 'result'}
-          />
-          <SingleCard
-            symbol={result.plays['player-2'].symbol}
-            position={[1.0, CARD_REST_Y + 0.01, 0.25]}
-            faceUp
-            fromPosition={[1.5, CARD_REST_Y + 0.25, 1.6]}
-            reducedMotion={reducedMotion}
-            textureQuality={quality}
-            highlighted={winnerSide === 'right'}
-          />
-          <WinHighlight
-            active={winnerSide !== null}
-            recipientSide={winnerSide}
-            reducedMotion={reducedMotion}
-          />
-        </>
+        <SingleCard
+          symbol={result.center.symbol}
+          position={[0, CARD_REST_Y + 0.015, -0.12]}
+          faceUp={centerFaceUp}
+          fromPosition={[0, CARD_REST_Y + 0.28, -0.12]}
+          reducedMotion={reducedMotion}
+          textureQuality={quality}
+          highlighted={centerFaceUp}
+        />
+      )}
+
+      {showPlayerTwo && result !== null && (
+        <SingleCard
+          symbol={result.plays['player-2'].symbol}
+          position={[0.95, CARD_REST_Y + 0.01, 0.28]}
+          faceUp
+          fromPosition={[1.4, CARD_REST_Y + 0.2, 1.5]}
+          reducedMotion={reducedMotion}
+          textureQuality={quality}
+          highlighted={winnerSide === 'right'}
+          dimmed={loserSide === 'right'}
+        />
+      )}
+
+      {winnerSide !== null && (
+        <WinHighlight
+          active
+          recipientSide={winnerSide}
+          reducedMotion={reducedMotion}
+        />
       )}
 
       {presentedPot.length > 0 && (
         <CardStack
           symbol="sun"
           count={presentedPot.length}
-          position={[-2.15, CARD_REST_Y, -0.15]}
+          position={[-2.05, CARD_REST_Y, -0.12]}
           faceUp={false}
           textureQuality={quality}
         />
@@ -370,8 +404,8 @@ function SceneContent({
       {historicalCenters.map((round, index) => (
         <group
           key={round.center.id}
-          position={[-3.7 + index * 0.68, CARD_REST_Y, -1.2]}
-          scale={0.42}
+          position={[-3.5 + index * 0.62, CARD_REST_Y, -1.15]}
+          scale={0.4}
         >
           <SingleCard
             symbol={round.center.symbol}
@@ -386,12 +420,12 @@ function SceneContent({
       {quality !== 'low' && (
         <ContactShadows
           position={[0, TABLE_Y + 0.001, 0]}
-          opacity={0.45}
+          opacity={0.32}
           scale={10}
-          blur={2.2}
-          far={2.8}
+          blur={2}
+          far={2.5}
           frames={1}
-          color="#000000"
+          color="#1a1410"
         />
       )}
 
@@ -411,16 +445,16 @@ function SceneContent({
       {quality === 'high' ? (
         <EffectComposer multisampling={4} enableNormalPass={false}>
           <Bloom
-            intensity={0.12}
-            luminanceThreshold={0.92}
-            luminanceSmoothing={0.35}
+            intensity={0.1}
+            luminanceThreshold={0.94}
+            luminanceSmoothing={0.3}
             mipmapBlur
           />
-          <Vignette eskil={false} offset={0.35} darkness={0.4} />
+          <Vignette eskil={false} offset={0.42} darkness={0.25} />
         </EffectComposer>
       ) : quality === 'medium' ? (
         <EffectComposer multisampling={0} enableNormalPass={false}>
-          <Vignette eskil={false} offset={0.4} darkness={0.35} />
+          <Vignette eskil={false} offset={0.45} darkness={0.2} />
         </EffectComposer>
       ) : null}
     </>
@@ -492,12 +526,12 @@ export function GameScene(props: SceneProps) {
             powerPreference: 'high-performance',
             alpha: false,
             toneMapping: ACESFilmicToneMapping,
-            toneMappingExposure: 1.0,
+            toneMappingExposure: 1.15,
             outputColorSpace: SRGBColorSpace,
           }}
           onCreated={({ gl }) => {
             gl.toneMapping = ACESFilmicToneMapping
-            gl.toneMappingExposure = 1.0
+            gl.toneMappingExposure = 1.15
             gl.outputColorSpace = SRGBColorSpace
             const canvas = gl.domElement
             const lost = (event: Event) => {

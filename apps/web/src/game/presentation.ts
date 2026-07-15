@@ -7,10 +7,7 @@ import {
   type SymbolCounts,
 } from '@astral-veil/engine'
 import type { RevealStage } from './store'
-
-function beforeResolutionFeedback(stage: RevealStage): boolean {
-  return stage === 'players' || stage === 'center'
-}
+import { isCenterConcealed, isPreResultReveal } from './revealTiming'
 
 export function visibleHand(
   match: MatchState,
@@ -21,7 +18,7 @@ export function visibleHand(
   const hand = match.players[player].hand
   if (
     result === null ||
-    !beforeResolutionFeedback(stage) ||
+    !isPreResultReveal(stage) ||
     result.recipient !== player
   ) {
     return hand
@@ -35,7 +32,7 @@ export function visiblePot(
   stage: RevealStage,
 ): readonly Card[] {
   const result = match.lastResult
-  if (result === null || !beforeResolutionFeedback(stage)) return match.pot
+  if (result === null || !isPreResultReveal(stage)) return match.pot
 
   const roundCardIds = new Set([
     result.center.id,
@@ -61,7 +58,7 @@ export function visibleCenterHistory(
   match: MatchState,
   stage: RevealStage,
 ): readonly RevealedRound[] {
-  if (stage === 'players' && match.lastResult !== null) {
+  if (isCenterConcealed(stage) && match.lastResult !== null) {
     return match.history.slice(0, -1)
   }
   return match.history
@@ -73,7 +70,7 @@ export function visibleUnseenCounts(
 ): SymbolCounts {
   const counts = getUnseenCenterCounts(match)
   const result = match.lastResult
-  if (stage !== 'players' || result === null) return counts
+  if (!isCenterConcealed(stage) || result === null) return counts
   return {
     ...counts,
     [result.center.symbol]: counts[result.center.symbol] + 1,

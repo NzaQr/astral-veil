@@ -17,28 +17,34 @@ import {
   type TextureQuality,
 } from './proceduralTextures'
 
-/** Poker-like proportions at table scale. */
-export const CARD_WIDTH = 1.05
-export const CARD_HEIGHT = 1.48
-export const CARD_THICKNESS = 0.028
-export const CARD_RADIUS = 0.055
-export const STACK_GAP = 0.034
+/** Poker silhouette: ~2.5×3.5 aspect, nearly flat. */
+export const CARD_WIDTH = 0.92
+export const CARD_HEIGHT = 1.3
+export const CARD_THICKNESS = 0.01
+export const CARD_RADIUS = 0.048
+export const STACK_GAP = 0.012
+
+const FACE_COLORS: Record<AstralSymbol, string> = {
+  sun: '#3a2410',
+  moon: '#1a2234',
+  star: '#162030',
+}
 
 const SYMBOL_COLORS: Record<
   AstralSymbol,
   { color: string; emissive: string; emissiveIntensity: number }
 > = {
-  sun: { color: '#d4a04a', emissive: '#5c3010', emissiveIntensity: 0.18 },
-  moon: { color: '#b8c0d4', emissive: '#2a3560', emissiveIntensity: 0.14 },
-  star: { color: '#5ec4cc', emissive: '#3a2868', emissiveIntensity: 0.2 },
+  sun: { color: '#f0b84a', emissive: '#c46a12', emissiveIntensity: 0.45 },
+  moon: { color: '#d8e0f2', emissive: '#5a6aa0', emissiveIntensity: 0.28 },
+  star: { color: '#7adce6', emissive: '#4a68c8', emissiveIntensity: 0.4 },
 }
 
 type InteractPhase = 'idle' | 'hover' | 'dragging'
 
-function starShape(): Shape {
+function starShape(outer = 0.36, inner = 0.15): Shape {
   const shape = new Shape()
   for (let point = 0; point < 10; point += 1) {
-    const radius = point % 2 === 0 ? 0.28 : 0.12
+    const radius = point % 2 === 0 ? outer : inner
     const angle = Math.PI / 2 + (point * Math.PI) / 5
     const x = Math.cos(angle) * radius
     const y = Math.sin(angle) * radius
@@ -49,52 +55,110 @@ function starShape(): Shape {
   return shape
 }
 
+/** Classic crescent: large disk with an offset hole. */
 function moonShape(): Shape {
   const shape = new Shape()
-  shape.moveTo(0.14, 0.28)
-  shape.bezierCurveTo(-0.2, 0.26, -0.32, 0.03, -0.22, -0.17)
-  shape.bezierCurveTo(-0.14, -0.34, 0.09, -0.36, 0.24, -0.2)
-  shape.bezierCurveTo(0.02, -0.17, -0.08, -0.03, -0.05, 0.08)
-  shape.bezierCurveTo(-0.03, 0.19, 0.05, 0.26, 0.14, 0.28)
+  const outer = 0.34
+  for (let i = 0; i <= 32; i += 1) {
+    const t = (i / 32) * Math.PI * 2
+    const x = Math.cos(t) * outer
+    const y = Math.sin(t) * outer
+    if (i === 0) shape.moveTo(x, y)
+    else shape.lineTo(x, y)
+  }
   shape.closePath()
+  const hole = new Shape()
+  const inner = 0.26
+  const ox = 0.14
+  for (let i = 0; i <= 32; i += 1) {
+    const t = (i / 32) * Math.PI * 2
+    const x = Math.cos(t) * inner + ox
+    const y = Math.sin(t) * inner
+    if (i === 0) hole.moveTo(x, y)
+    else hole.lineTo(x, y)
+  }
+  hole.closePath()
+  shape.holes.push(hole)
   return shape
 }
 
+function foilMaterial(
+  symbol: AstralSymbol,
+  intensity: number,
+) {
+  const mat = SYMBOL_COLORS[symbol]
+  return (
+    <meshStandardMaterial
+      color={mat.color}
+      emissive={mat.emissive}
+      emissiveIntensity={mat.emissiveIntensity * intensity}
+      metalness={0.35}
+      roughness={0.28}
+    />
+  )
+}
+
 function SunGlyph({ intensity }: { intensity: number }) {
-  const mat = SYMBOL_COLORS.sun
   return (
     <group>
       <mesh>
-        <cylinderGeometry args={[0.16, 0.16, 0.006, 28]} />
-        <meshStandardMaterial
-          color={mat.color}
-          emissive={mat.emissive}
-          emissiveIntensity={mat.emissiveIntensity * intensity}
-          metalness={0.55}
-          roughness={0.35}
-        />
+        <cylinderGeometry args={[0.2, 0.2, 0.004, 32]} />
+        {foilMaterial('sun', intensity)}
       </mesh>
-      {Array.from({ length: 8 }, (_, index) => (
-        <mesh
-          key={index}
-          position={[
-            Math.cos((index * Math.PI) / 4) * 0.26,
-            0,
-            Math.sin((index * Math.PI) / 4) * 0.26,
-          ]}
-          rotation={[0, -(index * Math.PI) / 4, Math.PI / 2]}
-        >
-          <boxGeometry args={[0.09, 0.006, 0.028]} />
-          <meshStandardMaterial
-            color={mat.color}
-            emissive={mat.emissive}
-            emissiveIntensity={mat.emissiveIntensity * intensity}
-            metalness={0.55}
-            roughness={0.35}
-          />
-        </mesh>
-      ))}
+      {Array.from({ length: 12 }, (_, index) => {
+        const angle = (index / 12) * Math.PI * 2
+        return (
+          <mesh
+            key={index}
+            position={[Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3]}
+            rotation={[0, -angle, 0]}
+          >
+            <boxGeometry args={[0.14, 0.0035, 0.032]} />
+            {foilMaterial('sun', intensity)}
+          </mesh>
+        )
+      })}
     </group>
+  )
+}
+
+function MoonGlyph({ intensity }: { intensity: number }) {
+  const shape = useMemo(() => moonShape(), [])
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <extrudeGeometry
+        args={[
+          shape,
+          {
+            depth: 0.004,
+            bevelEnabled: false,
+            curveSegments: 24,
+          },
+        ]}
+      />
+      {foilMaterial('moon', intensity)}
+    </mesh>
+  )
+}
+
+function StarGlyph({ intensity }: { intensity: number }) {
+  const shape = useMemo(() => starShape(0.38, 0.16), [])
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <extrudeGeometry
+        args={[
+          shape,
+          {
+            depth: 0.004,
+            bevelEnabled: true,
+            bevelThickness: 0.002,
+            bevelSize: 0.003,
+            bevelSegments: 1,
+          },
+        ]}
+      />
+      {foilMaterial('star', intensity)}
+    </mesh>
   )
 }
 
@@ -105,35 +169,9 @@ function SymbolGlyph({
   symbol: AstralSymbol
   intensity: number
 }) {
-  const shape = useMemo(
-    () => (symbol === 'star' ? starShape() : moonShape()),
-    [symbol],
-  )
-  const mat = SYMBOL_COLORS[symbol]
   if (symbol === 'sun') return <SunGlyph intensity={intensity} />
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <extrudeGeometry
-        args={[
-          shape,
-          {
-            depth: 0.006,
-            bevelEnabled: true,
-            bevelThickness: 0.003,
-            bevelSize: 0.004,
-            bevelSegments: 2,
-          },
-        ]}
-      />
-      <meshStandardMaterial
-        color={mat.color}
-        emissive={mat.emissive}
-        emissiveIntensity={mat.emissiveIntensity * intensity}
-        metalness={0.55}
-        roughness={0.32}
-      />
-    </mesh>
-  )
+  if (symbol === 'moon') return <MoonGlyph intensity={intensity} />
+  return <StarGlyph intensity={intensity} />
 }
 
 function FaceArt({
@@ -147,24 +185,28 @@ function FaceArt({
 }) {
   if (faceUp) {
     return (
-      <group position={[0, CARD_THICKNESS * 0.52, 0]}>
+      <group position={[0, CARD_THICKNESS * 0.55, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[CARD_WIDTH * 0.82, CARD_HEIGHT * 0.82]} />
+          <planeGeometry args={[CARD_WIDTH * 0.86, CARD_HEIGHT * 0.86]} />
           <meshStandardMaterial
-            color="#121018"
-            metalness={0.08}
-            roughness={0.62}
+            color={FACE_COLORS[symbol]}
+            metalness={0.06}
+            roughness={0.58}
+            emissive={SYMBOL_COLORS[symbol].emissive}
+            emissiveIntensity={0.06 + highlight * 0.08}
           />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.001]}>
-          <ringGeometry args={[0.34, 0.38, 40]} />
+          <ringGeometry args={[0.4, 0.44, 48]} />
           <meshStandardMaterial
-            color="#2a2434"
-            metalness={0.2}
-            roughness={0.5}
+            color={SYMBOL_COLORS[symbol].color}
+            metalness={0.4}
+            roughness={0.35}
+            emissive={SYMBOL_COLORS[symbol].emissive}
+            emissiveIntensity={0.15}
           />
         </mesh>
-        <group position={[0, 0.004, 0]}>
+        <group position={[0, 0.003, 0]}>
           <SymbolGlyph symbol={symbol} intensity={1 + highlight * 0.35} />
         </group>
       </group>
@@ -172,23 +214,19 @@ function FaceArt({
   }
 
   return (
-    <group position={[0, CARD_THICKNESS * 0.52, 0]} rotation={[0, Math.PI / 4, 0]}>
+    <group position={[0, CARD_THICKNESS * 0.55, 0]} rotation={[0, Math.PI / 4, 0]}>
       <mesh>
-        <torusGeometry args={[0.22, 0.016, 8, 32]} />
-        <meshStandardMaterial
-          color="#8a7358"
-          metalness={0.45}
-          roughness={0.4}
-        />
+        <torusGeometry args={[0.2, 0.012, 8, 28]} />
+        <meshStandardMaterial color="#9a8264" metalness={0.3} roughness={0.45} />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <octahedronGeometry args={[0.09, 0]} />
+        <octahedronGeometry args={[0.08, 0]} />
         <meshStandardMaterial
-          color="#4a5470"
-          emissive="#1e2848"
-          emissiveIntensity={0.2 + highlight * 0.15}
-          metalness={0.35}
-          roughness={0.42}
+          color="#5a6480"
+          emissive="#243048"
+          emissiveIntensity={0.18}
+          metalness={0.25}
+          roughness={0.45}
         />
       </mesh>
     </group>
@@ -203,6 +241,7 @@ function CardBody({
   highlight,
   maps,
   dualSided = false,
+  dimmed = false,
 }: {
   faceUp: boolean
   symbol: AstralSymbol
@@ -211,39 +250,26 @@ function CardBody({
   highlight: number
   maps: ReturnType<typeof createCardImperfections>
   dualSided?: boolean
+  dimmed?: boolean
 }) {
   return (
-    <group position={[0, offset, 0]}>
+    <group position={[0, offset, 0]} scale={dimmed ? 0.96 : 1}>
       <RoundedBox
         args={[CARD_WIDTH, CARD_THICKNESS, CARD_HEIGHT]}
         radius={CARD_RADIUS}
-        smoothness={4}
+        smoothness={3}
         castShadow
         receiveShadow
       >
         <meshStandardMaterial
-          color="#e8dfd0"
-          metalness={0.05}
-          roughness={0.72 + variation * 0.06}
+          color="#f0e8da"
+          metalness={0.04}
+          roughness={0.78 + variation * 0.05}
           roughnessMap={maps.roughnessMap}
           normalMap={maps.normalMap}
-          normalScale={new Vector2(0.12, 0.12)}
-        />
-      </RoundedBox>
-      <RoundedBox
-        args={[CARD_WIDTH * 0.94, CARD_THICKNESS * 0.35, CARD_HEIGHT * 0.94]}
-        radius={CARD_RADIUS * 0.85}
-        smoothness={3}
-        position={[0, CARD_THICKNESS * 0.28, 0]}
-      >
-        <meshStandardMaterial
-          color={faceUp || dualSided ? '#17141f' : '#10151e'}
-          metalness={0.12}
-          roughness={0.48 + variation * 0.08}
-          roughnessMap={maps.roughnessMap}
-          normalMap={maps.normalMap}
-          normalScale={new Vector2(0.1, 0.1)}
-          envMapIntensity={0.55 + highlight * 0.25}
+          normalScale={new Vector2(0.08, 0.08)}
+          transparent={dimmed}
+          opacity={dimmed ? 0.55 : 1}
         />
       </RoundedBox>
       {dualSided ? (
@@ -505,6 +531,7 @@ export interface SingleCardProps {
   reducedMotion?: boolean
   textureQuality?: TextureQuality
   highlighted?: boolean
+  dimmed?: boolean
   fromPosition?: readonly [number, number, number]
 }
 
@@ -515,6 +542,7 @@ export function SingleCard({
   reducedMotion = false,
   textureQuality = 'medium',
   highlighted = false,
+  dimmed = false,
   fromPosition,
 }: SingleCardProps) {
   const group = useRef<Group>(null)
@@ -534,24 +562,24 @@ export function SingleCard({
       }
       seeded.current = true
     }
-    const lift = highlighted && !reducedMotion ? 0.05 : 0
-    current.position.x = springStep(current.position.x, position[0], delta, 10)
+    const lift = highlighted && !reducedMotion ? 0.06 : 0
+    current.position.x = springStep(current.position.x, position[0], delta, 9)
     current.position.y = springStep(
       current.position.y,
       position[1] + lift,
       delta,
-      11,
+      10,
     )
-    current.position.z = springStep(current.position.z, position[2], delta, 10)
+    current.position.z = springStep(current.position.z, position[2], delta, 9)
 
     const targetFlip = faceUp ? 0 : Math.PI
     flip.current = reducedMotion
       ? targetFlip
-      : springStep(flip.current, targetFlip, delta, 9)
+      : springStep(flip.current, targetFlip, delta, 7)
     current.rotation.x = flip.current
 
-    const scale = highlighted ? 1.04 : 1
-    current.scale.setScalar(springStep(current.scale.x, scale, delta, 12))
+    const scale = highlighted ? 1.06 : dimmed ? 0.94 : 1
+    current.scale.setScalar(springStep(current.scale.x, scale, delta, 11))
   })
 
   return (
@@ -564,6 +592,7 @@ export function SingleCard({
         highlight={highlighted ? 1 : 0}
         maps={maps}
         dualSided
+        dimmed={dimmed}
       />
     </group>
   )

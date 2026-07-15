@@ -171,11 +171,11 @@ function buildTableTextures(quality: TextureQuality): {
         const v = y / s
         const fiber = fbm(u * 18, v * 22, 2.4, 4)
         const swirl = fbm(u * 3.2, v * 3.2, 9.1, 3)
-        const shade = 10 + fiber * 18 + swirl * 10
+        const shade = 42 + fiber * 28 + swirl * 18
         const i = (y * s + x) * 4
-        image.data[i] = Math.floor(shade * 0.55)
-        image.data[i + 1] = Math.floor(shade * 0.72)
-        image.data[i + 2] = Math.floor(shade * 0.78)
+        image.data[i] = Math.floor(shade * 0.72)
+        image.data[i + 1] = Math.floor(shade * 0.82)
+        image.data[i + 2] = Math.floor(shade * 0.92)
         image.data[i + 3] = 255
       }
     }
@@ -211,7 +211,7 @@ export function createTableTextures(quality: TextureQuality): {
   map: CanvasTexture
   roughnessMap: CanvasTexture
 } {
-  const key = `table-v2-${quality}`
+  const key = `table-v3-${quality}`
   const cached = tableCache.get(key)
   if (cached !== undefined) return cached
   const maps = buildTableTextures(quality)
