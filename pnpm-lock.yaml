@@ -6,13 +6,11 @@ settings:
 
 importers:
 
-  .: {}
-
-  apps/web:
+  .:
     dependencies:
       '@astral-veil/engine':
         specifier: workspace:*
-        version: link:../../packages/engine
+        version: link:packages/engine
       motion:
         specifier: ^12.42.2
         version: 12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

@@ -97,7 +97,7 @@ Version 1 includes restrained card and result sound effects, mute/volume control
 
 The pnpm workspace is divided into:
 
-- `apps/web`: React, Vite, TypeScript, Tailwind CSS, Motion, and Zustand.
+- root client (`src/`): React, Vite, TypeScript, Tailwind CSS, Motion, and Zustand.
 - `packages/engine`: pure deterministic rules, projections, simulation, and algorithmic AI.
 
 The engine runs locally for singleplayer and hot-seat. Player-specific projections redact the hidden center, deck order, opponent hand composition, and un-revealed opponent choice.
