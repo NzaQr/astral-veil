@@ -23,7 +23,7 @@ function App() {
     <div className="app-shell" data-reduced-motion={reducedMotion}>
       {screen === 'match' && match !== null && mode !== null ? (
         <Suspense
-          fallback={<div className="match-loading">Opening the astral table…</div>}
+          fallback={<div className="match-loading">Opening the table…</div>}
         >
           <MatchScreen
             match={match}

@@ -222,8 +222,7 @@ export function CardBoard({
       aria-label="Astral Veil table"
     >
       <div className="board-atmosphere" aria-hidden="true">
-        <span className="board-glow board-glow-a" />
-        <span className="board-glow board-glow-b" />
+        <span className="board-felt" />
         <span className="board-vignette" />
         <span className="board-grain" />
       </div>

@@ -4,10 +4,16 @@ import {
   type MatchState,
   type PlayerId,
 } from '@astral-veil/engine'
+import {
+  ArrowLeft01Icon,
+  BookOpen01Icon,
+  Clock01Icon,
+} from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { CardBoard } from './CardBoard'
 import { SymbolIcon } from './SymbolIcon'
+import { UiIcon } from './UiIcon'
 import { symbolName } from '../game/symbols'
 import {
   advanceRevealBeat,
@@ -29,12 +35,21 @@ function playerLabel(player: PlayerId, mode: MatchMode): string {
   return player === 'player-1' ? 'Player One' : 'Player Two'
 }
 
-function CenterHistory({ frame, match }: { frame: RoundRevealFrame | null; match: MatchState }) {
+function CenterHistory({
+  frame,
+  match,
+}: {
+  frame: RoundRevealFrame | null
+  match: MatchState
+}) {
   const history = frame?.history ?? match.history
   return (
     <details className="center-history">
       <summary>
-        <span>History</span>
+        <span>
+          <UiIcon icon={Clock01Icon} size={14} />
+          History
+        </span>
         <strong className="tabular">{history.length}</strong>
       </summary>
       <div className="center-history-body">
@@ -105,9 +120,9 @@ function ResolutionBanner({
     <motion.div
       className={`resolution-banner stage-${stage}`}
       key={stage}
-      initial={reducedMotion ? false : { opacity: 0, y: -9, scale: 0.98 }}
+      initial={reducedMotion ? false : { opacity: 0, y: -8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       role="status"
       aria-live="polite"
     >
@@ -170,17 +185,17 @@ function MatchResult({
         role="dialog"
         aria-modal="true"
         aria-labelledby="result-title"
-        initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 14, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
       >
         <p className="eyebrow">{verdict}</p>
         <h2 id="result-title">{title}</h2>
         <p>
           Lower burden wins. Final score{' '}
-          <strong>{outcome.scores['player-1']}</strong>
-          <span> — </span>
-          <strong>{outcome.scores['player-2']}</strong>
+          <strong className="tabular">{outcome.scores['player-1']}</strong>
+          <span> - </span>
+          <strong className="tabular">{outcome.scores['player-2']}</strong>
         </p>
         {match.pot.length > 0 && (
           <small>
@@ -234,7 +249,7 @@ function Handoff({
       animate={{ opacity: 1 }}
     >
       <div className="handoff-sigil" aria-hidden="true">
-        <SymbolIcon symbol="moon" size={42} />
+        <SymbolIcon symbol="moon" size={36} />
       </div>
       <p className="eyebrow">Privacy handoff</p>
       <h2 id="handoff-title">Pass to {playerLabel(player, mode)}</h2>
@@ -243,7 +258,7 @@ function Handoff({
         the screen.
       </p>
       <button className="primary-button" type="button" onClick={accept}>
-        I’m ready
+        I'm ready
       </button>
     </motion.div>
   )
@@ -335,7 +350,8 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
       >
         <header className="match-header">
           <button className="match-exit" type="button" onClick={exitMatch}>
-            <span aria-hidden="true">←</span> Exit
+            <UiIcon icon={ArrowLeft01Icon} size={16} />
+            Exit
           </button>
           <div className="round-marker">
             <small>{mode === 'solo' ? 'Solo match' : 'Hot-seat match'}</small>
@@ -346,11 +362,15 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
             type="button"
             onClick={() => openDialog('rules')}
           >
+            <UiIcon icon={BookOpen01Icon} size={15} />
             Rules
           </button>
         </header>
         <div className="score-row">
-          <div className="burden-count" aria-label={`${playerLabel('player-1', mode)} burden`}>
+          <div
+            className="burden-count"
+            aria-label={`${playerLabel('player-1', mode)} burden`}
+          >
             <span>{playerLabel('player-1', mode)}</span>
             <strong className="tabular">{playerOneBurden}</strong>
           </div>
@@ -358,7 +378,10 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
             <span>Unseen</span>
             <strong className="tabular">{unseenTotal}</strong>
           </div>
-          <div className="burden-count" aria-label={`${playerLabel('player-2', mode)} burden`}>
+          <div
+            className="burden-count"
+            aria-label={`${playerLabel('player-2', mode)} burden`}
+          >
             <span>{playerLabel('player-2', mode)}</span>
             <strong className="tabular">{playerTwoBurden}</strong>
           </div>

@@ -1,6 +1,13 @@
 import type { AiDifficulty } from '@astral-veil/engine'
+import {
+  ArrowLeft01Icon,
+  ArrowUpRight01Icon,
+  BookOpen01Icon,
+  Settings01Icon,
+} from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { SymbolIcon } from './SymbolIcon'
+import { UiIcon } from './UiIcon'
 import { useGameStore } from '../game/store'
 
 const DIFFICULTIES: ReadonlyArray<{
@@ -28,8 +35,8 @@ const DIFFICULTIES: ReadonlyArray<{
 function BrandMark() {
   return (
     <div className="brand-mark" aria-hidden="true">
-      <span className="brand-orbit" />
-      <SymbolIcon symbol="star" size={32} />
+      <span className="brand-ring" />
+      <SymbolIcon symbol="star" size={28} />
     </div>
   )
 }
@@ -40,7 +47,7 @@ function Home({ reducedMotion }: { reducedMotion: boolean }) {
   const openDialog = useGameStore((state) => state.openDialog)
   const itemMotion = reducedMotion
     ? {}
-    : { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }
+    : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } }
 
   return (
     <motion.main
@@ -48,70 +55,80 @@ function Home({ reducedMotion }: { reducedMotion: boolean }) {
       className="menu-screen"
       initial={false}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, y: -8 }}
+      exit={{ opacity: 0 }}
     >
-      <div className="menu-atmosphere" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <section className="menu-card">
-        <motion.div {...itemMotion} transition={{ duration: 0.35 }}>
+      <div className="menu-felt" aria-hidden="true" />
+      <section className="menu-stage">
+        <motion.div {...itemMotion} transition={{ duration: 0.28, ease: 'easeOut' }}>
           <BrandMark />
         </motion.div>
         <motion.div
           className="title-lockup"
           {...itemMotion}
-          transition={{ duration: 0.35, delay: reducedMotion ? 0 : 0.08 }}
+          transition={{
+            duration: 0.28,
+            ease: 'easeOut',
+            delay: reducedMotion ? 0 : 0.06,
+          }}
         >
-          <p className="eyebrow">A game of hidden alignment</p>
           <h1>Astral Veil</h1>
           <p className="menu-intro">
-            Read the unseen. Break the pattern. Leave the table with the
-            lighter burden.
+            Commit from a finite hand. Match the center. Leave with the lighter
+            burden.
           </p>
         </motion.div>
         <motion.nav
           className="menu-actions"
           aria-label="Main menu"
           {...itemMotion}
-          transition={{ duration: 0.35, delay: reducedMotion ? 0 : 0.16 }}
+          transition={{
+            duration: 0.28,
+            ease: 'easeOut',
+            delay: reducedMotion ? 0 : 0.12,
+          }}
         >
           <button
             className="primary-button"
             type="button"
             onClick={() => setScreen('difficulty')}
           >
-            <span>Solo</span>
-            <small>Face a fair AI</small>
+            <span className="menu-action-label">
+              <strong>Solo</strong>
+              <small>Face a fair AI</small>
+            </span>
+            <UiIcon icon={ArrowUpRight01Icon} size={18} />
           </button>
           <button
             className="secondary-button"
             type="button"
             onClick={startHotSeat}
           >
-            <span>Hot Seat</span>
-            <small>Two players, one device</small>
+            <span className="menu-action-label">
+              <strong>Hot Seat</strong>
+              <small>Two players, one device</small>
+            </span>
+            <UiIcon icon={ArrowUpRight01Icon} size={18} />
           </button>
         </motion.nav>
         <motion.div
           className="menu-utility"
           {...itemMotion}
-          transition={{ duration: 0.35, delay: reducedMotion ? 0 : 0.24 }}
+          transition={{
+            duration: 0.28,
+            ease: 'easeOut',
+            delay: reducedMotion ? 0 : 0.18,
+          }}
         >
           <button type="button" onClick={() => openDialog('rules')}>
+            <UiIcon icon={BookOpen01Icon} size={16} />
             How to Play
           </button>
-          <span aria-hidden="true" />
           <button type="button" onClick={() => openDialog('settings')}>
+            <UiIcon icon={Settings01Icon} size={16} />
             Settings
           </button>
         </motion.div>
       </section>
-      <p className="menu-footnote">
-        Each commitment is final <span aria-hidden="true">✦</span> Choose with
-        intent
-      </p>
     </motion.main>
   )
 }
@@ -124,21 +141,21 @@ function Difficulty({ reducedMotion }: { reducedMotion: boolean }) {
     <motion.main
       key="difficulty"
       className="difficulty-screen"
-      initial={reducedMotion ? false : { opacity: 0, x: 18 }}
+      initial={reducedMotion ? false : { opacity: 0, x: 14 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 10 }}
-      transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+      exit={{ opacity: 0, x: 8 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
     >
       <button
         type="button"
         className="back-button"
         onClick={() => setScreen('home')}
       >
-        <span aria-hidden="true">←</span> Main menu
+        <UiIcon icon={ArrowLeft01Icon} size={18} />
+        Main menu
       </button>
-      <section>
-        <p className="eyebrow">Choose your opponent</p>
-        <h1>How closely should the veil listen?</h1>
+      <section className="difficulty-stage">
+        <h1>Choose your opponent</h1>
         <p className="difficulty-intro">
           Every opponent sees only public information and its own hand.
         </p>
@@ -149,15 +166,14 @@ function Difficulty({ reducedMotion }: { reducedMotion: boolean }) {
               type="button"
               className={`difficulty-card difficulty-${difficulty.id}`}
               onClick={() => startSolo(difficulty.id)}
-              initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                type: 'spring',
-                duration: 0.3,
-                bounce: 0,
-                delay: reducedMotion ? 0 : index * 0.08,
+                duration: 0.22,
+                ease: 'easeOut',
+                delay: reducedMotion ? 0 : index * 0.06,
               }}
-              whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.98 }}
             >
               <span className="difficulty-index">0{index + 1}</span>
               <span className="difficulty-name">{difficulty.name}</span>
@@ -165,7 +181,8 @@ function Difficulty({ reducedMotion }: { reducedMotion: boolean }) {
                 {difficulty.description}
               </span>
               <span className="difficulty-choose">
-                Begin match <span aria-hidden="true">↗</span>
+                Begin match
+                <UiIcon icon={ArrowUpRight01Icon} size={16} />
               </span>
             </motion.button>
           ))}

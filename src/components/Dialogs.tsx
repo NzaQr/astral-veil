@@ -1,23 +1,19 @@
 import { SYMBOLS } from '@astral-veil/engine'
+import { Cancel01Icon } from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { SymbolIcon } from './SymbolIcon'
+import { UiIcon } from './UiIcon'
 import { symbolName } from '../game/symbols'
 import { useGameStore, type MotionPreference } from '../game/store'
 
 interface DialogFrameProps {
   title: string
-  eyebrow: string
   children: React.ReactNode
   reducedMotion: boolean
 }
 
-function DialogFrame({
-  title,
-  eyebrow,
-  children,
-  reducedMotion,
-}: DialogFrameProps) {
+function DialogFrame({ title, children, reducedMotion }: DialogFrameProps) {
   const closeDialog = useGameStore((state) => state.closeDialog)
   const closeRef = useRef<HTMLButtonElement>(null)
 
@@ -45,16 +41,13 @@ function DialogFrame({
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
-        initial={reducedMotion ? false : { opacity: 0, y: 18, scale: 0.985 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 14, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 8, scale: 0.99 }}
-        transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+        exit={{ opacity: 0, y: 6, scale: 0.99 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
       >
         <div className="dialog-heading">
-          <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h2 id="dialog-title">{title}</h2>
-          </div>
+          <h2 id="dialog-title">{title}</h2>
           <button
             ref={closeRef}
             className="icon-button"
@@ -62,7 +55,7 @@ function DialogFrame({
             onClick={closeDialog}
             aria-label="Close dialog"
           >
-            <span aria-hidden="true">×</span>
+            <UiIcon icon={Cancel01Icon} size={20} />
           </button>
         </div>
         {children}
@@ -73,47 +66,41 @@ function DialogFrame({
 
 function Rules({ reducedMotion }: { reducedMotion: boolean }) {
   return (
-    <DialogFrame
-      title="How to Play"
-      eyebrow="The rules of the veil"
-      reducedMotion={reducedMotion}
-    >
+    <DialogFrame title="How to Play" reducedMotion={reducedMotion}>
       <div className="rules-copy">
         <p className="rules-lead">
-          Read the center deck, manage a finite hand, and finish with a smaller
-          burden than your opponent.
+          Commit from a finite hand. Match the hidden center to force the pot
+          onto your opponent. Lowest burden wins.
         </p>
         <ol className="rule-steps">
           <li>
             <span>01</span>
             <div>
-              <h3>Commit in secret</h3>
+              <h3>Commit</h3>
               <p>
-                A hidden center card is drawn. Both players irreversibly commit
-                one Sun, Moon, or Star from their hand.
+                A face-down center card is drawn. Each player secretly commits
+                one Sun, Moon, or Star. Commitments are final.
               </p>
             </div>
           </li>
           <li>
             <span>02</span>
             <div>
-              <h3>Reveal the three cards</h3>
+              <h3>Reveal</h3>
               <p>
-                Plays are revealed in the order they were committed, then the
-                center card, then the outcome. All three enter the public pot.
+                Reveal plays in commit order, then the center, then the outcome.
+                All three cards enter the pot.
               </p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
-              <h3>Resolve the omen</h3>
+              <h3>Resolve</h3>
               <p>
-                Exactly one match is a decisive round. The other player takes
-                every card in the accumulated pot into their burden — the center
-                and both played cards, plus anything left from prior standoffs.
-                Burden cards cannot be played. If both or neither match, it is a
-                standoff and the pot stays.
+                One match is a decisive round: the non-matching player takes the
+                entire pot into their burden (unplayable). Both match or neither
+                is a standoff: the pot stays.
               </p>
             </div>
           </li>
@@ -121,17 +108,17 @@ function Rules({ reducedMotion }: { reducedMotion: boolean }) {
         <div className="rules-symbols" aria-label="The three card symbols">
           {SYMBOLS.map((symbol) => (
             <div key={symbol}>
-              <SymbolIcon symbol={symbol} size={30} />
+              <SymbolIcon symbol={symbol} size={26} />
               <span>{symbolName(symbol)}</span>
             </div>
           ))}
         </div>
         <div className="rule-note">
-          <h3>How a match ends</h3>
+          <h3>End of match</h3>
           <p>
-            After a resolved round, the match ends if either hand is empty or
-            no future center cards remain. Only burden sizes count: lower score
-            wins, equal scores draw. A terminal unclaimed pot stays unclaimed.
+            After a resolved round, the match ends if a hand is empty or no
+            center cards remain. Lower burden wins. Equal burdens draw. An
+            unclaimed terminal pot stays unclaimed.
           </p>
         </div>
       </div>
@@ -144,17 +131,13 @@ function Settings({ reducedMotion }: { reducedMotion: boolean }) {
   const setMotion = useGameStore((state) => state.setMotion)
 
   return (
-    <DialogFrame
-      title="Settings"
-      eyebrow="Display preferences"
-      reducedMotion={reducedMotion}
-    >
+    <DialogFrame title="Settings" reducedMotion={reducedMotion}>
       <div className="settings-list">
         <fieldset>
           <legend>Motion</legend>
           <p>
-            System follows your device. Reduced keeps only transitions needed
-            to understand match state.
+            System follows your device. Reduced keeps only transitions needed to
+            understand match state.
           </p>
           <SegmentedControl<MotionPreference>
             value={motionPreference}
