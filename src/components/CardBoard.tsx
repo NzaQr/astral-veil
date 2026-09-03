@@ -160,6 +160,9 @@ function RevealSlot({
       className={`reveal-slot${className ? ` ${className}` : ''}`}
       aria-label={label}
     >
+      <span className="reveal-slot-label" aria-hidden="true">
+        {label}
+      </span>
       <div className="reveal-slot-stage">{children}</div>
     </div>
   )

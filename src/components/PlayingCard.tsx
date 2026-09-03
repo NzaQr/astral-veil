@@ -64,7 +64,7 @@ export function PlayingCard({
     ? { duration: 0.01 }
     : { type: 'spring' as const, duration: 0.35, bounce: 0 }
 
-  // Selected cards already lift via animate.y — hover must not change y
+  // Selected cards already lift via animate.y. Hover must not change y
   // (that would drop the card from -16 toward -10).
   const hover =
     interactive && !disabled && !reducedMotion
@@ -101,7 +101,7 @@ export function PlayingCard({
         </span>
       )}
       {selected && (
-        <span className="playing-card-select-ring" aria-hidden="true" />
+        <span className="playing-card-selection-mark" aria-hidden="true" />
       )}
       {outcome === 'winner' && (
         <span className="playing-card-outcome winner" aria-hidden="true">

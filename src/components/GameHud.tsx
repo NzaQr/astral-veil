@@ -14,6 +14,7 @@ import { useEffect } from 'react'
 import { CardBoard } from './CardBoard'
 import { SymbolIcon } from './SymbolIcon'
 import { UiIcon } from './UiIcon'
+import { CARD_BACK } from '../game/cardArt'
 import { symbolName } from '../game/symbols'
 import {
   advanceRevealBeat,
@@ -248,8 +249,8 @@ function Handoff({
       initial={reducedMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      <div className="handoff-sigil" aria-hidden="true">
-        <SymbolIcon symbol="moon" size={36} />
+      <div className="handoff-visual" aria-hidden="true">
+        <img src={CARD_BACK} alt="" draggable={false} />
       </div>
       <p className="eyebrow">Privacy handoff</p>
       <h2 id="handoff-title">Pass to {playerLabel(player, mode)}</h2>
@@ -349,40 +350,53 @@ export function MatchScreen({ match, mode, reducedMotion }: MatchScreenProps) {
         inert={handoffVisible ? true : undefined}
       >
         <header className="match-header">
-          <button className="match-exit" type="button" onClick={exitMatch}>
-            <UiIcon icon={ArrowLeft01Icon} size={16} />
-            Exit
-          </button>
+          <div className="match-header-side match-header-left">
+            <button className="match-exit" type="button" onClick={exitMatch}>
+              <UiIcon icon={ArrowLeft01Icon} size={16} />
+              Exit
+            </button>
+            <span className="match-wordmark" aria-hidden="true">
+              Astral Veil
+            </span>
+          </div>
           <div className="round-marker">
             <small>{mode === 'solo' ? 'Solo match' : 'Hot-seat match'}</small>
             <strong>Round {match.round}</strong>
           </div>
-          <button
-            className="match-rules"
-            type="button"
-            onClick={() => openDialog('rules')}
-          >
-            <UiIcon icon={BookOpen01Icon} size={15} />
-            Rules
-          </button>
+          <div className="match-header-side match-header-right">
+            <button
+              className="match-rules"
+              type="button"
+              onClick={() => openDialog('rules')}
+            >
+              <UiIcon icon={BookOpen01Icon} size={15} />
+              Rules
+            </button>
+          </div>
         </header>
         <div className="score-row">
           <div
             className="burden-count"
             aria-label={`${playerLabel('player-1', mode)} burden`}
           >
-            <span>{playerLabel('player-1', mode)}</span>
+            <span>
+              {playerLabel('player-1', mode)}
+              <small>burden</small>
+            </span>
             <strong className="tabular">{playerOneBurden}</strong>
           </div>
           <div className="center-deck-count">
-            <span>Unseen</span>
+            <span>Unseen center cards</span>
             <strong className="tabular">{unseenTotal}</strong>
           </div>
           <div
             className="burden-count"
             aria-label={`${playerLabel('player-2', mode)} burden`}
           >
-            <span>{playerLabel('player-2', mode)}</span>
+            <span>
+              {playerLabel('player-2', mode)}
+              <small>burden</small>
+            </span>
             <strong className="tabular">{playerTwoBurden}</strong>
           </div>
         </div>
